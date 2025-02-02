@@ -18,6 +18,7 @@ import (
 	"github.com/mattermost/mattermost-plugin-calls/server/public"
 
 	"github.com/mattermost/mattermost-plugin-calls/server/db"
+	"github.com/pion/webrtc/v3"
 
 	rtcd "github.com/mattermost/rtcd/service"
 	"github.com/mattermost/rtcd/service/rtc"
@@ -607,39 +608,60 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 	}
 
 	// session_idを取り出す
-	sessionID := body["session_id"].(string)
-  
-	// ログにsession_idを出力する
-	fmt.Println("===========================================================")
-	fmt.Println("session_id: ", sessionID)
-	fmt.Println("===========================================================")
-
-	var dataMap map[string]interface{}
-	if err := json.Unmarshal(msg.Data, &dataMap); err != nil {
-		return fmt.Errorf("failed to unmarshal msg.Data: %w", err)
+	// body map[sessionId:029871122cf3a65f2126ab2fb45ba3ee]
+	sessionID, ok := body["sessionId"].(string)
+	if !ok {
+		return fmt.Errorf("sessionId not found in response body")
 	}
 
-	sdp := dataMap["sdp"].(string)
-	tracks := dataMap["tracks"].([]interface{})
+	var dataMap map[string]interface{}
+
+	if err := json.Unmarshal(msg.Data , &dataMap); err != nil {
+    return fmt.Errorf("failed to unmarshal msg.Data: %w", err)
+  }
+
+	sdp, ok := dataMap["sdp"].(string)
+	if !ok {
+			return fmt.Errorf("invalid or missing 'sdp' field, expected a string but got: %T", dataMap["sdp"])
+	}
+
+	// tracks(e.g. [map[location:local mid:0 trackName:8cddd41d-47e3-439e-9982-05c1d183d5d4]])
+	tracks, ok := dataMap["tracks"].([]interface{})
+	if !ok {
+			return fmt.Errorf("invalid or missing 'tracks' field, expected an array but got: %T", dataMap["tracks"])
+	}
+
+	trackList := []map[string]interface{}{}
+	for _, track := range tracks {
+		trackMap, ok := track.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("invalid track, expected a map but got: %T", track)
+		}
+		location := trackMap["location"].(string)
+		mid := trackMap["mid"].(string)
+		trackName := trackMap["trackName"].(string)
+		trackList = append(trackList, map[string]interface{}{
+			"location": location,
+			"mid": mid,
+			"trackName": trackName,
+		})
+	}
+	fmt.Println("sdp:", sdp)
+
+  data, err := unpackSDPData(sdp)
+
+	var webrtcsdp webrtc.SessionDescription
+	if err := json.Unmarshal([]byte(sdp), &webrtcsdp); err != nil {
+		return fmt.Errorf("failed to unmarshal sdp: %w", err)
+	}
 
 	// POST /apps/{appId}/sessions/{sessionId}/tracks/newを実行する
 	body = map[string]interface{}{
 		"sessionDescription": map[string]interface{}{
 			"type": "offer",
-			"sdp":  sdp,
+			"sdp": webrtcsdp.SDP,
 		},
-		"tracks": func() []map[string]interface{} {
-			var result []map[string]interface{}
-			for _, track := range tracks {
-				trackMap := track.(map[string]interface{})
-				result = append(result, map[string]interface{}{
-					"location":  "local",
-					"mid":       trackMap["mid"],
-					"trackName": trackMap["id"],
-				})
-			}
-			return result
-		}(),
+		"tracks": trackList,
 	}
 
 	jsonBody, err := json.Marshal(body)
@@ -647,11 +669,13 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 		return fmt.Errorf("failed to marshal body: %w", err)
 	}
 
+	fmt.Println("jsonBody: ", string(jsonBody))
+
 	req, err = http.NewRequest("POST", API_BASE+"/sessions/"+sessionID+"/tracks/new", bytes.NewReader(jsonBody))
   if err != nil {
 		return fmt.Errorf("failed to create new request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer " + APP_TOKEN)
 
 	resp, err = client.Do(req)
@@ -1389,53 +1413,33 @@ func (p *Plugin) WebSocketMessageHasBeenPosted(connID, userID string, req *model
 		}
 		return
 	case clientMessageTypeSDP:
-		fmt.Println("===========================================================")
-		// req.Dataの中身をログに出力する
-		fmt.Println("req.Data: ", req.Data)
-		fmt.Println("===========================================================")
-		// req.Dataの中身は以下
-		// map[data:map[sdp:[120 156 69 144 91 79 220 48 16 133 255 138 149 215 214 197 201 230 226 28 41 15 185 173 4 165 104 165 5 209 86 188 152 196 155 181 154 139 101 155 238 2 226 191 147 176 139 208 60 88 254 102 230 204 153 121 245 220 179 150 30 188 105 183 147 198 251 238 217 86 207 191 255 25 123 48 15 227 148 81 18 242 48 77 216 42 77 252 36 100 81 204 131 21 9 200 229 13 185 220 132 196 15 146 31 108 14 127 41 182 25 93 30 151 49 242 209 44 178 206 76 79 26 197 221 77 117 93 127 50 121 116 131 208 84 244 253 116 160 131 58 202 246 196 7 171 90 106 229 32 70 167 26 144 251 95 219 133 15 153 208 186 87 141 112 106 26 73 74 238 170 205 69 117 123 189 189 216 150 183 27 114 144 143 198 53 180 21 78 52 123 49 142 178 95 122 154 236 236 110 113 54 199 73 95 53 146 62 237 140 232 48 118 201 253 23 211 135 22 50 255 198 167 63 63 159 127 15 117 123 245 242 248 247 192 247 173 14 55 87 95 85 147 94 12 88 56 163 154 127 189 60 37 118 106 236 164 209 70 141 14 118 47 104 16 197 196 231 88 213 72 35 148 9 202 53 146 8 121 141 117 142 58 6 203 17 23 168 56 120 128 178 68 92 35 169 81 148 72 87 40 24 252 28 69 142 168 2 231 72 3 172 11 20 28 126 137 138 45 58 97 136 124 86 14 79 131 173 116 243 93 69 227 180 176 246 124 62 213 226 188 169 157 57 213 147 113 136 24 59 179 65 28 233 32 173 21 157 164 86 189 72 4 113 224 135 31 114 222 219 59 165 113 163 131] tracks:[1fed0251-5261-4d85-b742-8892b3fba3e2]]
-		// msgData, ok := req.Data["data"].([]byte)
-		dataMap, ok := req.Data["data"].(map[string]interface{})
+		sdp, ok := req.Data["sdp"].([]byte)
 		if !ok {
-			p.LogError("Failed to convert data to map")
-			return
-		}
-		sdpStr, exists := dataMap["sdp"].([]byte)
-		if !exists {
 			p.LogError("invalid or missing sdp data")
 			return
 		}
-		unpackedSDPData, err := unpackSDPData(sdpStr)
+		unpackedSDP, err := unpackSDPData(sdp)
 		if err != nil {
 			p.LogError(err.Error())
 			return
 		}
-		tracks, ok := dataMap["tracks"].([]interface{})
+
+		tracks, ok := req.Data["tracks"].([]interface{})
 		if !ok {
 			p.LogError("invalid or missing tracks data")
 			return
 		}
-		var trackList []string
-		for _, track := range tracks {
-			if trackStr, ok := track.(string); ok {
-				trackList = append(trackList, trackStr)
-			}
-		}
-		msgData := map[string]interface{}{
-			"sdp":    unpackedSDPData,
-			"tracks": trackList,
-		}
-		jsonData, err := json.Marshal(msgData)
+	
+		data, err := json.Marshal(map[string]interface{}{
+			"sdp":    unpackedSDP,
+			"tracks": tracks,
+		})
 		if err != nil {
-			p.LogError("Failed to marshal SDP data: " + err.Error())
+			p.LogError("failed to marshal data", "error", err)
 			return
 		}
-		fmt.Println("===========================================================")
-		fmt.Println("jsonData: ", jsonData)
-		fmt.Println("===========================================================")
-		// unpackedSDPDataとdataMap["tracks"]を使って、msg.Dataを作成する
-		msg.Data = jsonData
+
+		msg.Data = data
 	case clientMessageTypeICE, clientMessageTypeScreenOn:
 		msgData, ok := req.Data["data"].(string)
 		if !ok {
