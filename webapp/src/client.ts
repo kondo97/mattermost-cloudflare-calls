@@ -28,6 +28,18 @@ export const userLeftChannelErr = new Error('user has left channel');
 
 const rtcMonitorInterval = 10000;
 
+// RTCPeerを拡張する
+class NewRTCPeer extends RTCPeer {
+    public transcecivers: RTCRtpTransceiver[] = [];
+
+    public async AddTransceiver(peer: RTCPeer, streams: MediaStream[]) {
+        streams.map((stream) => {
+            const localPeerConnection = (peer as any).pc
+            localPeerConnection.addTransceiver(stream, {})
+        })
+    }
+}
+
 export default class CallsClient extends EventEmitter {
     public channelID: string;
     private readonly config: CallsClientConfig;
@@ -333,7 +345,37 @@ export default class CallsClient extends EventEmitter {
                     data: zlibSync(strToU8(payload)),
                 }, true);
             };
-            peer.on('offer', sdpHandler);
+
+            const sdpandtrackHandler = (sdp: RTCSessionDescription) => {
+                const payload = JSON.stringify(sdp);
+
+                const transceivers: RTCRtpTransceiver[] = this.streams.flatMap((stream) => {
+                    return stream.getTracks().map((track) => {
+                      const localPeerConnection = (this.peer as any).pc;
+                      return localPeerConnection.addTransceiver(track, {
+                        direction: "sendonly",
+                      });
+                    });
+                  });
+                console.log("-------------------------------------")
+                console.log("transceivers", transceivers)
+                // SDP data is compressed using zlib since it's text based
+                // and can grow substantially, potentially hitting the maximum
+                // message size (4KB).
+                ws.send('sdp', {
+                    data: {
+                      sdp: zlibSync(strToU8(payload)),
+                      tracks: transceivers.map(({ mid, sender }) => ({
+                        location: "local",
+                        mid,
+                        trackName: sender.track?.id,
+                      })),
+                    }
+                }, true);
+            }
+
+            // peer.on('offer', sdpHandler);
+            peer.on('offer', sdpandtrackHandler);
             peer.on('answer', sdpHandler);
 
             peer.on('candidate', (candidate) => {
