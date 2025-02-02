@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"encoding/base64"
 
 	"github.com/mattermost/mattermost-plugin-calls/server/batching"
 	"github.com/mattermost/mattermost-plugin-calls/server/public"
@@ -614,18 +615,36 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 		return fmt.Errorf("sessionId not found in response body")
 	}
 
+	// var dataMap map[string]interface{}
+
+	// if err := json.Unmarshal(msg.Data , &dataMap); err != nil {
+  //   return fmt.Errorf("failed to unmarshal msg.Data: %w", err)
+  // }
+
+	fmt.Println("=================================================")
+	fmt.Printf("%T\n", msg.Data)
+	fmt.Println(string(msg.Data))
+
 	var dataMap map[string]interface{}
-
-	if err := json.Unmarshal(msg.Data , &dataMap); err != nil {
-    return fmt.Errorf("failed to unmarshal msg.Data: %w", err)
-  }
-
-	sdp, ok := dataMap["sdp"].(string)
-	if !ok {
-			return fmt.Errorf("invalid or missing 'sdp' field, expected a string but got: %T", dataMap["sdp"])
+	if err := json.Unmarshal([]byte(msg.Data), &dataMap); err != nil {
+		return fmt.Errorf("failed to unmarshal msg.Data: %w", err)
 	}
 
-	// tracks(e.g. [map[location:local mid:0 trackName:8cddd41d-47e3-439e-9982-05c1d183d5d4]])
+	sdpBase64, ok := dataMap["sdp"].(string)
+	if !ok {
+		return fmt.Errorf("invalid or missing 'sdp' field, expected a string but got: %T", dataMap["sdp"])
+	}
+
+	sdpDecoded, err := base64.StdEncoding.DecodeString(sdpBase64)
+	if err != nil {
+		return fmt.Errorf("failed to decode base64 sdp: %w", err)
+	}
+
+	var webrtcsdp webrtc.SessionDescription
+	if err := json.Unmarshal(sdpDecoded, &webrtcsdp); err != nil {
+		return fmt.Errorf("failed to unmarshal sdp: %w", err)
+	}
+
 	tracks, ok := dataMap["tracks"].([]interface{})
 	if !ok {
 			return fmt.Errorf("invalid or missing 'tracks' field, expected an array but got: %T", dataMap["tracks"])
@@ -645,14 +664,6 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 			"mid": mid,
 			"trackName": trackName,
 		})
-	}
-	fmt.Println("sdp:", sdp)
-
-  data, err := unpackSDPData(sdp)
-
-	var webrtcsdp webrtc.SessionDescription
-	if err := json.Unmarshal([]byte(sdp), &webrtcsdp); err != nil {
-		return fmt.Errorf("failed to unmarshal sdp: %w", err)
 	}
 
 	// POST /apps/{appId}/sessions/{sessionId}/tracks/newを実行する
@@ -684,7 +695,7 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusCreated {
+	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, string(bodyBytes))
 	}
@@ -1438,7 +1449,6 @@ func (p *Plugin) WebSocketMessageHasBeenPosted(connID, userID string, req *model
 			p.LogError("failed to marshal data", "error", err)
 			return
 		}
-
 		msg.Data = data
 	case clientMessageTypeICE, clientMessageTypeScreenOn:
 		msgData, ok := req.Data["data"].(string)
