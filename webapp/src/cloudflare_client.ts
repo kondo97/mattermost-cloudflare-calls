@@ -138,6 +138,7 @@ class RTCPeer extends EventEmitter {
         console.log('answer', msg.sessionDescription);
         await this.pc.setRemoteDescription(new RTCSessionDescription(msg.sessionDescription));
         await connected;
+        this.emit('connect');
         break;
     default:
         throw new Error('invalid signaling data received');
@@ -160,6 +161,7 @@ export default class CloudflareCallsClient extends EventEmitter {
   private audioDevices: AudioDevices;
   private readonly onDeviceChange: () => void;
   private closed = false;
+  private connected = false;
 
   constructor(config: CloudflareCallsClientConfig) {
     super();
@@ -425,13 +427,14 @@ export default class CloudflareCallsClient extends EventEmitter {
         //     }
         // });
 
-        // peer.on('connect', () => {
-        //     logDebug('rtc connected');
+        peer.on('connect', () => {
+            console.log('rtc connected');
+            logDebug('rtc connected');
 
-        //     this.emit('connect');
-        //     this.rtcMonitor?.start();
-        //     this.connected = true;
-        // });
+            this.emit('connect');
+            // this.rtcMonitor?.start();
+            this.connected = true;
+        });
 
         peer.on('close', () => {
             logDebug('rtc closed');
@@ -468,6 +471,10 @@ export default class CloudflareCallsClient extends EventEmitter {
             }
         }
     });
+  }
+
+  public async unmute() {
+    return
   }
 
   public disconnect(err?: Error) {

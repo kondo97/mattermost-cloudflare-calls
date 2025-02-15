@@ -9,6 +9,9 @@ export type Props = {
 }
 
 export default function LoadingOverlay({visible, joining}: Props) {
+    console.log('visible', visible);
+    console.log('joining', joining);
+    
     const {formatMessage} = useIntl();
     const [animationEnded, setAnimationEnded] = useState(false);
     const wasJoining = useMemo(() => {

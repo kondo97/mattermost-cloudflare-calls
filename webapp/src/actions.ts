@@ -598,6 +598,7 @@ export const loadCallState = (channelID: string, call: CallState) => (dispatch: 
 };
 
 export const setClientConnecting = (value: boolean) => (dispatch: Dispatch) => {
+    console.log('setClientConnecting', value);
     dispatch({
         type: CLIENT_CONNECTING,
         data: value,

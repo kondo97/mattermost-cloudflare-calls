@@ -28,18 +28,6 @@ export const userLeftChannelErr = new Error('user has left channel');
 
 const rtcMonitorInterval = 10000;
 
-// RTCPeerを拡張する
-class NewRTCPeer extends RTCPeer {
-    public transcecivers: RTCRtpTransceiver[] = [];
-
-    public async AddTransceiver(peer: RTCPeer, streams: MediaStream[]) {
-        streams.map((stream) => {
-            const localPeerConnection = (peer as any).pc
-            localPeerConnection.addTransceiver(stream, {})
-        })
-    }
-}
-
 export default class CallsClient extends EventEmitter {
     public channelID: string;
     private readonly config: CallsClientConfig;
