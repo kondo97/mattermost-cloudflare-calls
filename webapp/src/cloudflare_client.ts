@@ -91,6 +91,58 @@ class RTCPeer extends EventEmitter {
     }
     this.pc = null;
   }
+
+  public async signal(data: string) {
+    if (!this.pc) {
+      throw new Error('peer has been destroyed already');
+    }
+   logDebug('RTCPeer.signal: handling remote signaling data', data);
+
+   console.log('signal', data);
+
+    const msg = JSON.parse(data);
+
+    const connected = new Promise((res, rej) => {
+        if (!this.pc) {
+          throw new Error('peer has been destroyed already');
+        }
+        // timeout after 5s
+        setTimeout(rej, 5000);
+        const iceConnectionStateChangeHandler = () => {
+        if (!this.pc) {
+            throw new Error('peer has been destroyed already');
+            }
+          if (this.pc.iceConnectionState === "connected") {
+            this.pc.removeEventListener(
+              "iceconnectionstatechange",
+              iceConnectionStateChangeHandler,
+            );
+            res(undefined);
+          }
+        };
+        this.pc.addEventListener(
+          "iceconnectionstatechange",
+          iceConnectionStateChangeHandler,
+        );
+    });
+
+    console.log("=======================")
+    console.log('msg', msg)
+    console.log("=======================")
+
+    const type = msg.sessionDescription.type;
+    console.log('type', type);
+
+    switch (type) {
+    case 'answer':
+        console.log('answer', msg.sessionDescription);
+        await this.pc.setRemoteDescription(new RTCSessionDescription(msg.sessionDescription));
+        await connected;
+        break;
+    default:
+        throw new Error('invalid signaling data received');
+    }
+  }
 }
 
 export default class CloudflareCallsClient extends EventEmitter {
@@ -403,17 +455,19 @@ export default class CloudflareCallsClient extends EventEmitter {
         }
     });
 
-    // ws.on('message', async ({data}) => {
-    //     const msg = JSON.parse(data);
-    //     if (!msg) {
-    //         return;
-    //     }
-    //     if (msg.type === 'answer' || msg.type === 'offer' || msg.type === 'candidate') {
-    //         if (this.peer) {
-    //             await this.peer.signal(data);
-    //         }
-    //     }
-    // });  
+    ws.on('message', async ({data}) => {
+        console.log('message', data);
+        const msg = JSON.parse(data);
+        if (!msg) {
+            return;
+        }
+        const type = msg.sessionDescription.type;
+        if (type === 'answer' || type === 'offer' || type === 'candidate') {
+            if (this.peer) {
+                await this.peer.signal(data);
+            }
+        }
+    });
   }
 
   public disconnect(err?: Error) {

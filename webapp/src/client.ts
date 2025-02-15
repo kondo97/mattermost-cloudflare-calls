@@ -433,6 +433,7 @@ export default class CallsClient extends EventEmitter {
             if (msg.type === 'answer' || msg.type === 'offer' || msg.type === 'candidate') {
                 if (this.peer) {
                     await this.peer.signal(data);
+                    this.connected = true
                 }
             }
         });

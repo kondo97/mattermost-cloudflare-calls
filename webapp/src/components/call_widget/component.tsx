@@ -2118,6 +2118,11 @@ export default class CallWidget extends React.PureComponent<Props, State> {
         const settingsButtonLabel = formatMessage({defaultMessage: 'Settings'});
         const leaveMenuLabel = formatMessage({defaultMessage: 'Leave call'});
 
+        console.log('this.props.global', this.props.global);
+        console.log('this.props', this.props);
+        console.log('this.props.clientConnecting', this.props.clientConnecting);
+        console.log(' this.props.sessions.length', this.props.sessions.length);
+
         return (
             <div
                 id='calls-widget'

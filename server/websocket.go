@@ -706,17 +706,17 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
 	
-	// レスポンスのbodyをJSONとしてパースする
-	respBody := map[string]interface{}{}
-	if err := json.Unmarshal(bodyBytes, &respBody); err != nil {
-		return fmt.Errorf("failed to unmarshal response body: %w", err)
-	}
+	// // レスポンスのbodyをJSONとしてパースする
+	// respBody := map[string]interface{}{}
+	// if err := json.Unmarshal(bodyBytes, &respBody); err != nil {
+	// 	return fmt.Errorf("failed to unmarshal response body: %w", err)
+	// }
 
 	us := p.getSessionByOriginalID(msg.SessionID)
 
 	// websocketのanswerを呼び出す
 	p.publishWebSocketEvent(wsEventSignal, map[string]interface{}{
-		"data":   respBody,
+		"data": string(bodyBytes),
 		"connID": msg.SessionID,
 	}, &WebSocketBroadcast{ConnectionID: us.connID, ReliableClusterSend: true})
 
@@ -965,33 +965,33 @@ func (p *Plugin) handleJoin(userID, connID, authSessionID string, joinData calls
 			}
 
 			if handlerID == p.nodeID {
-				cfg := rtc.SessionConfig{
-					GroupID:   "default",
-					CallID:    us.callID,
-					UserID:    userID,
-					SessionID: connID,
-					Props: rtc.SessionProps{
-						"channelID":   channelID,
-						"av1Support":  joinData.AV1Support,
-						"dcSignaling": joinData.DCSignaling,
-					},
-				}
+				// cfg := rtc.SessionConfig{
+				// 	GroupID:   "default",
+				// 	CallID:    us.callID,
+				// 	UserID:    userID,
+				// 	SessionID: connID,
+				// 	Props: rtc.SessionProps{
+				// 		"channelID":   channelID,
+				// 		"av1Support":  joinData.AV1Support,
+				// 		"dcSignaling": joinData.DCSignaling,
+				// 	},
+				// }
 				p.LogDebug("initializing RTC session", "userID", userID, "connID", connID, "channelID", channelID, "callID", us.callID)
-				if err = p.rtcServer.InitSession(cfg, func() error {
-					if atomic.CompareAndSwapInt32(&us.rtcClosed, 0, 1) {
-						close(us.rtcCloseCh)
-						return p.removeSession(us)
-					}
-					return nil
-				}); err != nil {
-					p.LogError("failed to init session", "err", err.Error())
-					go func() {
-						if err := p.handleLeave(us, userID, connID, channelID, handlerID); err != nil {
-							p.LogError(err.Error())
-						}
-					}()
-					return state
-				}
+				// if err = p.rtcServer.InitSession(cfg, func() error {
+				// 	if atomic.CompareAndSwapInt32(&us.rtcClosed, 0, 1) {
+				// 		close(us.rtcCloseCh)
+				// 		return p.removeSession(us)
+				// 	}
+				// 	return nil
+				// }); err != nil {
+				// 	p.LogError("failed to init session", "err", err.Error())
+				// 	go func() {
+				// 		if err := p.handleLeave(us, userID, connID, channelID, handlerID); err != nil {
+				// 			p.LogError(err.Error())
+				// 		}
+				// 	}()
+				// 	return state
+				// }
 			} else {
 				if err := p.sendClusterMessage(clusterMessage{
 					ConnID:    connID,

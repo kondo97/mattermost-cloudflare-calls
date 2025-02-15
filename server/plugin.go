@@ -81,23 +81,23 @@ type Plugin struct {
 }
 
 func (p *Plugin) startSession(us *session, senderID string, props rtc.SessionProps) {
-	cfg := rtc.SessionConfig{
-		GroupID:   "default",
-		CallID:    us.callID,
-		UserID:    us.userID,
-		SessionID: us.connID,
-		Props:     props,
-	}
-	if err := p.rtcServer.InitSession(cfg, func() error {
-		p.LogDebug("rtc session close cb", "sessionID", us.connID)
-		if atomic.CompareAndSwapInt32(&us.rtcClosed, 0, 1) {
-			close(us.rtcCloseCh)
-		}
-		return p.removeSession(us)
-	}); err != nil {
-		p.LogError(err.Error(), "sessionConfig", fmt.Sprintf("%+v", cfg))
-		return
-	}
+	// cfg := rtc.SessionConfig{
+	// 	GroupID:   "default",
+	// 	CallID:    us.callID,
+	// 	UserID:    us.userID,
+	// 	SessionID: us.connID,
+	// 	Props:     props,
+	// }
+	// if err := p.rtcServer.InitSession(cfg, func() error {
+	// 	p.LogDebug("rtc session close cb", "sessionID", us.connID)
+	// 	if atomic.CompareAndSwapInt32(&us.rtcClosed, 0, 1) {
+	// 		close(us.rtcCloseCh)
+	// 	}
+	// 	return p.removeSession(us)
+	// }); err != nil {
+	// 	p.LogError(err.Error(), "sessionConfig", fmt.Sprintf("%+v", cfg))
+	// 	return
+	// }
 
 	defer func() {
 		p.LogDebug("closing rtc session", "sessionID", us.connID)
