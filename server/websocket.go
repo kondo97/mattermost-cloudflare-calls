@@ -62,6 +62,7 @@ const (
 	wsEventHostScreenOff             = "host_screen_off"
 	wsEventHostLowerHand             = "host_lower_hand"
 	wsEventHostRemoved               = "host_removed"
+	weEventAddUser                   = "add_user"
 
 	wsReconnectionTimeout = 10 * time.Second
 
@@ -458,6 +459,15 @@ func (p *Plugin) handleClientMsg(us *session, msg clientMessage, handlerID strin
 			ChannelID: us.channelID,
 			UserIDs:   getUserIDsFromSessions(sessions),
 		})
+	case clientMessageTypeAddUser:
+		rtcMsg := rtc.Message{
+			SessionID: us.originalConnID,
+			Type:      rtc.SDPMessage,
+			Data:      msg.Data,
+		}
+		if err := p.handleAddUser(rtcMsg, us.callID); err != nil {
+			return fmt.Errorf("failed to handle add user: %w", err)
+		}
 	default:
 		return fmt.Errorf("invalid client message type %q", msg.Type)
 	}
@@ -621,10 +631,6 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
   //   return fmt.Errorf("failed to unmarshal msg.Data: %w", err)
   // }
 
-	fmt.Println("=================================================")
-	fmt.Printf("%T\n", msg.Data)
-	fmt.Println(string(msg.Data))
-
 	var dataMap map[string]interface{}
 	if err := json.Unmarshal([]byte(msg.Data), &dataMap); err != nil {
 		return fmt.Errorf("failed to unmarshal msg.Data: %w", err)
@@ -680,8 +686,6 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 		return fmt.Errorf("failed to marshal body: %w", err)
 	}
 
-	fmt.Println("jsonBody: ", string(jsonBody))
-
 	req, err = http.NewRequest("POST", API_BASE+"/sessions/"+sessionID+"/tracks/new", bytes.NewReader(jsonBody))
   if err != nil {
 		return fmt.Errorf("failed to create new request: %w", err)
@@ -720,6 +724,71 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 		"connID": msg.SessionID,
 	}, &WebSocketBroadcast{ConnectionID: us.connID, ReliableClusterSend: true})
 
+	return nil
+}
+
+func (p *Plugin) handleAddUser(msg rtc.Message, callID string) error {
+	APP_ID := "5a11beb519a5f360006faa9249830037";
+	APP_TOKEN := "af68e58c1025bed9103f8014b46d0ba8ed2ec74c659e79f8893db67185d7a5c1";
+	API_BASE := "https://rtc.live.cloudflare.com/v1/apps/" + APP_ID
+
+	var dataMap map[string]interface{}
+	if err := json.Unmarshal([]byte(msg.Data), &dataMap); err != nil {
+		return fmt.Errorf("failed to unmarshal msg.Data: %w", err)
+	}
+	tracks, ok := dataMap["tracks"].([]interface{})
+	if !ok {
+		return fmt.Errorf("invalid or missing 'tracks' field, expected an array but got: %T", dataMap["tracks"])
+	}
+	trackList := []map[string]interface{}{}
+	for _, track := range tracks {
+		trackMap, ok := track.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("invalid track, expected a map but got: %T", track)
+		}
+		location := trackMap["location"].(string)
+		mid := trackMap["mid"].(string)
+		trackName := trackMap["trackName"].(string)
+		trackList = append(trackList, map[string]interface{}{
+			"location": location,
+			"mid": mid,
+			"trackName": trackName,
+		})
+	}
+
+	var body = map[string]interface{}{
+		"tracks": trackList,
+	}
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("failed to marshal body: %w", err)
+	}
+
+	client := &http.Client{}
+	// POST /apps/{appId}/sessions/:id/tracks/newを実行する
+	req, err := http.NewRequest("POST", API_BASE + "/sessions/" + msg.SessionID + "/tracks/new", bytes.NewReader(jsonBody))
+	if err != nil {
+		return fmt.Errorf("failed to create new request: %w", err)
+	}
+	req.Header.Add("Authorization", "Bearer " + APP_TOKEN)
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, string(bodyBytes))
+  }
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+	us := p.getSessionByOriginalID(msg.SessionID)
+	p.publishWebSocketEvent(wsEventSignal, map[string]interface{}{
+		"data": string(bodyBytes),
+		"connID": msg.SessionID,
+	}, &WebSocketBroadcast{ConnectionID: us.connID, ReliableClusterSend: true})
 	return nil
 }
 
@@ -1019,6 +1088,7 @@ func (p *Plugin) handleJoin(userID, connID, authSessionID string, joinData calls
 		// send successful join response
 		p.publishWebSocketEvent(wsEventJoin, map[string]interface{}{
 			"connID": connID,
+			"first_join": len(state.sessionsForUser(userID)) == 1,
 		}, &WebSocketBroadcast{ConnectionID: connID, ReliableClusterSend: true})
 
 		if len(state.sessionsForUser(userID)) == 1 {
@@ -1504,6 +1574,18 @@ func (p *Plugin) WebSocketMessageHasBeenPosted(connID, userID string, req *model
 			return
 		}
 		return
+	case clientMessageTypeAddUser:
+		tracks, ok := req.Data["tracks"].([]interface{})
+		if !ok {
+			p.LogError("invalid or missing tracks data")
+			return
+		}
+		data, err := json.Marshal(tracks)
+		if err != nil {
+			p.LogError("failed to marshal tracks", "error", err)
+			return
+		}
+		msg.Data = data
 	}
 
 	select {

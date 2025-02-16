@@ -345,8 +345,6 @@ export default class CallsClient extends EventEmitter {
                       });
                     });
                   });
-                console.log("-------------------------------------")
-                console.log("transceivers", transceivers)
                 // SDP data is compressed using zlib since it's text based
                 // and can grow substantially, potentially hitting the maximum
                 // message size (4KB).

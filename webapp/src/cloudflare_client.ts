@@ -59,7 +59,6 @@ class RTCPeer extends EventEmitter {
     if (!this.pc) {
       throw new Error('peer has been destroyed already');
     }
-    console.log('pc', this.pc);
 
     const transceivers = media.getTracks().map((track) => {
       if (!this.pc) {
@@ -71,14 +70,29 @@ class RTCPeer extends EventEmitter {
     });
     this.transceivers.push(...transceivers);
 
+    // const localOffer = await this.pc.createOffer();
+    // await this.pc.setLocalDescription(localOffer);
+
+    // this.emit('offer', this.pc.localDescription);
+  }
+
+  public async createOffer() {
+    if (!this.pc) {
+      throw new Error('peer has been destroyed already');
+    }
+
     const localOffer = await this.pc.createOffer();
-    console.log('localOffer', localOffer);
     await this.pc.setLocalDescription(localOffer);
 
-    console.log('localOffer2', localOffer);
-    console.log('pc2', this.pc);
-
     this.emit('offer', this.pc.localDescription);
+  }
+
+  public async addUser() {
+    if (!this.pc) {
+      throw new Error('peer has been destroyed already');
+    }
+
+    this.emit('addUser', this.transceivers)
   }
 
   public get_transceivers(media: MediaStream) {
@@ -126,16 +140,10 @@ class RTCPeer extends EventEmitter {
         );
     });
 
-    console.log("=======================")
-    console.log('msg', msg)
-    console.log("=======================")
-
     const type = msg.sessionDescription.type;
-    console.log('type', type);
 
     switch (type) {
     case 'answer':
-        console.log('answer', msg.sessionDescription);
         await this.pc.setRemoteDescription(new RTCSessionDescription(msg.sessionDescription));
         await connected;
         this.emit('connect');
@@ -325,7 +333,8 @@ export default class CloudflareCallsClient extends EventEmitter {
       }
     });
 
-    ws.on('join', async () => {
+    ws.on('join', async (data) => {
+        console.log('join', data);
         logDebug('join ack received, initializing connection');
 
         const peer = new RTCPeer({
@@ -375,27 +384,40 @@ export default class CloudflareCallsClient extends EventEmitter {
                 return;
             }
 
-            console.log('peer', peer)
-
             const transceivers = peer.get_transceivers(this.stream);
 
-            console.log('transceivers', transceivers);
             // SDP data is compressed using zlib since it's text based
             // and can grow substantially, potentially hitting the maximum
             // message size (4KB).
-            ws.send('sdp', {
-              tracks: transceivers.map(({ mid, sender }) => ({
-                location: "local",
-                mid,
-                trackName: sender.track?.id,
-              })),
-              sdp: zlibSync(strToU8(payload)),
-            }, true);
+            if (data.first_join) {
+              ws.send('sdp', {
+                tracks: transceivers.map(({ mid, sender }) => ({
+                  location: "local",
+                  mid,
+                  trackName: sender.track?.id,
+                })),
+                sdp: zlibSync(strToU8(payload)),
+              }, true);
+            } else {
+              ws.send('sdp', {
+                sdp: zlibSync(strToU8(payload)),
+              }, true);
+            }
         }
 
         // peer.on('offer', sdpHandler);
         peer.on('offer', sdpandtrackHandler);
         peer.on('answer', sdpHandler);
+
+        peer.on('addUser', (transceivers: RTCRtpTransceiver[]) => {
+            ws.send('addUser', {
+                tracks: transceivers.map(({ mid, sender }) => ({
+                    location: "local",
+                    mid,
+                    trackName: sender.track?.id,
+                })),
+            });
+        });
 
         peer.on('candidate', (candidate) => {
             ws.send('ice', {
@@ -428,7 +450,6 @@ export default class CloudflareCallsClient extends EventEmitter {
         // });
 
         peer.on('connect', () => {
-            console.log('rtc connected');
             logDebug('rtc connected');
 
             this.emit('connect');
@@ -449,6 +470,13 @@ export default class CloudflareCallsClient extends EventEmitter {
                 throw new Error('no stream available');
             }
             await peer.init(this.stream);
+
+            if (data.first_join) {
+              await peer.createOffer();
+            } else {
+              await peer.addUser();
+            }
+
             if (this.closed) {
                 return;
             }
@@ -459,7 +487,6 @@ export default class CloudflareCallsClient extends EventEmitter {
     });
 
     ws.on('message', async ({data}) => {
-        console.log('message', data);
         const msg = JSON.parse(data);
         if (!msg) {
             return;
@@ -474,7 +501,36 @@ export default class CloudflareCallsClient extends EventEmitter {
   }
 
   public async unmute() {
-    return
+    if (!this.peer) {
+      return;
+    }
+
+    if (!this.audioTrack) {
+      try {
+          await this.initAudio();
+      } catch (err) {
+          this.emit('error', err);
+          return;
+      }
+    }
+
+    // if (this.audioTrack) {
+    //   if (this.voiceTrackAdded) {
+    //       logDebug('replacing track to peer', this.audioTrack.id);
+    //       this.peer.replaceTrack(this.audioTrack.id, this.audioTrack);
+    //   } else if (this.stream) {
+    //       logDebug('adding track to peer', this.audioTrack.id, this.stream.id);
+    //       await this.peer.addTrack(this.audioTrack, this.stream);
+    //       this.voiceTrackAdded = true;
+    //   }
+    //   this.audioTrack.enabled = true;
+    // }
+
+    this.emit('unmute');
+
+    if (this.ws) {
+      this.ws.send('unmute');
+    }
   }
 
   public disconnect(err?: Error) {

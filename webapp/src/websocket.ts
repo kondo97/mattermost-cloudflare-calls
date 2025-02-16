@@ -130,7 +130,7 @@ export class WebSocketClient extends EventEmitter {
             }
 
             if (msg.event === this.eventPrefix + '_join') {
-                this.emit('join');
+                this.emit('join', msg.data);
             }
 
             if (msg.event === this.eventPrefix + '_error') {
