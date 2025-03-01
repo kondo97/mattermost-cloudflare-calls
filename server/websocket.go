@@ -704,6 +704,19 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 		return fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, string(bodyBytes))
 	}
 
+	cloudflareCallSession := &public.CallCloudflareSession{
+		ID: model.NewId(),
+		CallID: callID,
+		CloudflareCallSessionID: sessionID,
+	}
+
+	fmt.Printf("cloudflareCallSession: %v\n", cloudflareCallSession)
+
+	// session_idをDBに保存する
+	if err := p.store.CreateCallCloudflareSession(cloudflareCallSession); err != nil {
+		return fmt.Errorf("failed to update call session: %w", err)
+	}
+
 	// レスポンスのbodyを読み込む
 	bodyBytes, err = io.ReadAll(resp.Body)
 	if err != nil {
@@ -764,9 +777,18 @@ func (p *Plugin) handleAddUser(msg rtc.Message, callID string) error {
 		return fmt.Errorf("failed to marshal body: %w", err)
 	}
 
+	sessionId, err := p.store.GetCallCloudflareSession(callID)
+	if err != nil {
+		return fmt.Errorf("failed to get call cloudflare session: %w", err)
+	}
+
+	fmt.Printf("==================================")
+	fmt.Printf("sessionId: %v\n", sessionId)
+	fmt.Printf("==================================")
+
 	client := &http.Client{}
 	// POST /apps/{appId}/sessions/:id/tracks/newを実行する
-	req, err := http.NewRequest("POST", API_BASE + "/sessions/" + msg.SessionID + "/tracks/new", bytes.NewReader(jsonBody))
+	req, err := http.NewRequest("POST", API_BASE + "/sessions/" + sessionId.CloudflareCallSessionID + "/tracks/new", bytes.NewReader(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create new request: %w", err)
 	}
