@@ -67,13 +67,13 @@ docker cp e2e/config-patch.json ${CONTAINER_SERVER}1:/mattermost
 echo "Installing calls ..."
 docker exec \
 	${CONTAINER_SERVER}1 \
-	sh -c "/mattermost/bin/mmctl plugin add bin/calls && sleep 5"
+	sh -c "/mattermost/bin/mmctl plugin add com.mattermost.cloudflare.calls && sleep 5"
 
 # Patch config
 echo "Patching calls config ..."
 docker exec \
 	${CONTAINER_SERVER}1 \
-	sh -c "/mattermost/bin/mmctl plugin disable com.mattermostl.cloudflare.calls && sleep 2 && /mattermost/bin/mmctl config patch /mattermost/config-patch.json && sleep 2 && /mattermost/bin/mmctl plugin enable com.mattermost.calls"
+	sh -c "/mattermost/bin/mmctl plugin disable com.mattermost.cloudflare.calls && sleep 2 && /mattermost/bin/mmctl config patch /mattermost/config-patch.json && sleep 2 && /mattermost/bin/mmctl plugin enable com.mattermost.calls"
 
 echo "Spawning playwright image ..."
 # run e2e
