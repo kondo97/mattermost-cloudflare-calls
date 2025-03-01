@@ -6,7 +6,7 @@ Calls enables voice calling and screen sharing functionality in Mattermost chann
 
 ## Installation
 
-1. Download the latest version from the [release page](https://github.com/mattermost/mattermost-plugin-calls/releases).
+1. Download the latest version from the [release page](https://github.com/kondo97/mattermost-cloudflare-calls/releases).
 2. Upload the file through **System Console > Plugins > Plugin Management**, or manually upload it to the Mattermost server under plugin directory. 
 3. Configure and enable the plugin.
 

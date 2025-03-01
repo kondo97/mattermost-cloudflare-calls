@@ -7,7 +7,7 @@ import (
 	"database/sql"
 	"net/http"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/public"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/public"
 
 	rtcd "github.com/mattermost/rtcd/service"
 	"github.com/mattermost/rtcd/service/rtc"

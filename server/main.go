@@ -6,9 +6,9 @@ package main
 import (
 	"golang.org/x/time/rate"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/batching"
-	"github.com/mattermost/mattermost-plugin-calls/server/cluster"
-	"github.com/mattermost/mattermost-plugin-calls/server/performance"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/batching"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/cluster"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/performance"
 
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/plugin"

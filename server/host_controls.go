@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/db"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/db"
 
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/pkg/errors"

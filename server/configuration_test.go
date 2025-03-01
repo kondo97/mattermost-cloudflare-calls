@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	transcriber "github.com/mattermost/calls-transcriber/cmd/transcriber/config"
-	"github.com/mattermost/mattermost-plugin-calls/server/enterprise"
-	pluginMocks "github.com/mattermost/mattermost-plugin-calls/server/mocks/github.com/mattermost/mattermost/server/public/plugin"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/enterprise"
+	pluginMocks "github.com/kondo97/mattermost-cloudflare-calls/server/mocks/github.com/mattermost/mattermost/server/public/plugin"
 	"github.com/mattermost/mattermost/server/public/plugin"
 
 	"github.com/mattermost/mattermost/server/public/model"

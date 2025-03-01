@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/testutils"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/testutils"
 
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/shared/mlog"
@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	mlogMocks "github.com/mattermost/mattermost-plugin-calls/server/mocks/github.com/mattermost/mattermost/server/public/shared/mlog"
+	mlogMocks "github.com/kondo97/mattermost-cloudflare-calls/server/mocks/github.com/mattermost/mattermost/server/public/shared/mlog"
 )
 
 func TestSetupConn(t *testing.T) {

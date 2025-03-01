@@ -18,11 +18,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/cluster"
-	"github.com/mattermost/mattermost-plugin-calls/server/db"
-	"github.com/mattermost/mattermost-plugin-calls/server/interfaces"
-	"github.com/mattermost/mattermost-plugin-calls/server/license"
-	"github.com/mattermost/mattermost-plugin-calls/server/public"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/cluster"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/db"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/interfaces"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/license"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/public"
 
 	rtcd "github.com/mattermost/rtcd/service"
 	"github.com/mattermost/rtcd/service/random"

@@ -18,14 +18,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mattermost/mattermost-plugin-calls/lt/client"
+	"github.com/kondo97/mattermost-cloudflare-calls/lt/client"
 
 	"github.com/mattermost/mattermost/server/public/model"
 
 	"github.com/pion/webrtc/v4/pkg/rtcerr"
 )
 
-const pkgPrefix = "github.com/mattermost/mattermost-plugin-calls/lt/"
+const pkgPrefix = "github.com/kondo97/mattermost-cloudflare-calls/lt/"
 const rtcdPkgPrefix = "github.com/mattermost/rtcd/"
 
 func slogReplaceAttr(_ []string, a slog.Attr) slog.Attr {

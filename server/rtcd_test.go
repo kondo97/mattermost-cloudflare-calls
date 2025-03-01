@@ -12,8 +12,8 @@ import (
 
 	rtcd "github.com/mattermost/rtcd/service"
 
-	rtcdMocks "github.com/mattermost/mattermost-plugin-calls/server/mocks/github.com/mattermost/mattermost-plugin-calls/server/interfaces"
-	pluginMocks "github.com/mattermost/mattermost-plugin-calls/server/mocks/github.com/mattermost/mattermost/server/public/plugin"
+	rtcdMocks "github.com/kondo97/mattermost-cloudflare-calls/server/mocks/github.com/kondo97/mattermost-cloudflare-calls/server/interfaces"
+	pluginMocks "github.com/kondo97/mattermost-cloudflare-calls/server/mocks/github.com/mattermost/mattermost/server/public/plugin"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

@@ -1,4 +1,4 @@
-module github.com/mattermost/mattermost-plugin-calls/lt
+module github.com/kondo97/mattermost-cloudflare-calls/lt
 
 go 1.22.7
 

@@ -12,14 +12,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/batching"
-	"github.com/mattermost/mattermost-plugin-calls/server/cluster"
-	"github.com/mattermost/mattermost-plugin-calls/server/enterprise"
-	"github.com/mattermost/mattermost-plugin-calls/server/public"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/batching"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/cluster"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/enterprise"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/public"
 
-	serverMocks "github.com/mattermost/mattermost-plugin-calls/server/mocks/github.com/mattermost/mattermost-plugin-calls/server/interfaces"
-	pluginMocks "github.com/mattermost/mattermost-plugin-calls/server/mocks/github.com/mattermost/mattermost/server/public/plugin"
-	rtcMocks "github.com/mattermost/mattermost-plugin-calls/server/mocks/github.com/mattermost/rtcd/service/rtc"
+	serverMocks "github.com/kondo97/mattermost-cloudflare-calls/server/mocks/github.com/kondo97/mattermost-cloudflare-calls/server/interfaces"
+	pluginMocks "github.com/kondo97/mattermost-cloudflare-calls/server/mocks/github.com/mattermost/mattermost/server/public/plugin"
+	rtcMocks "github.com/kondo97/mattermost-cloudflare-calls/server/mocks/github.com/mattermost/rtcd/service/rtc"
 
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/plugin"

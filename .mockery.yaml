@@ -2,7 +2,7 @@ quiet: False
 with-expecter: true
 dir: "server/mocks/{{.PackagePath}}"
 packages:
-    github.com/mattermost/mattermost-plugin-calls/server/interfaces:
+    github.com/kondo97/mattermost-cloudflare-calls/server/interfaces:
         config:
         interfaces:
             Metrics:
