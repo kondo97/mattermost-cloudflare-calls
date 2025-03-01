@@ -21,6 +21,10 @@ export const userLeftChannelErr = new Error('user has left channel');
 
 type CloudflareCallsClientConfig = CallsClientConfig
 
+// type RTCTrackOptions = {
+//   codec: RTCRtpCodecCapability;
+// }
+
 interface Logger {
   logDebug: (...args: unknown[]) => void;
   logErr: (...args: unknown[]) => void;
@@ -40,6 +44,7 @@ class RTCPeer extends EventEmitter {
   private config: RTCPeerConfig;
   private pc: RTCPeerConnection | null;
   private transceivers: RTCRtpTransceiver[];
+  private readonly senders: { [key: string]: RTCRtpSender[] };
 
   constructor(config: RTCPeerConfig) {
     super();
@@ -53,6 +58,7 @@ class RTCPeer extends EventEmitter {
       bundlePolicy: "max-bundle",
     });
     this.transceivers = [];
+    this.senders = {};
   }
 
   public async init(media: MediaStream) {
@@ -75,6 +81,60 @@ class RTCPeer extends EventEmitter {
 
     // this.emit('offer', this.pc.localDescription);
   }
+
+  // public async addTrack(track: MediaStreamTrack, stream: MediaStream, opts?: RTCTrackOptions) {
+  //   if (!this.pc) {
+  //       throw new Error('peer has been destroyed');
+  //   }
+
+  //   let sender : RTCRtpSender;
+  //   if (track.kind === 'video') {
+  //       // Simulcast
+
+  //       // NOTE: Unfortunately Firefox cannot simulcast screen sharing tracks
+  //       // properly (https://bugzilla.mozilla.org/show_bug.cgi?id=1692873).
+  //       // TODO: check whether track is coming from screenshare when we
+  //       // start supporting video.
+
+  //       // this.logger.logDebug('RTCPeer.addTrack: creating new transceiver on send');
+  //       const trx = this.pc.addTransceiver(track, {
+  //           direction: 'sendonly',
+  //           // sendEncodings: this.config.simulcast && !isFirefox() ? DefaultSimulcastScreenEncodings : FallbackScreenEncodings,
+  //           streams: [stream!],
+  //       });
+
+  //       if (opts?.codec && trx.setCodecPreferences) {
+  //           // this.logger.logDebug('setting video codec preference', opts.codec);
+  //           trx.setCodecPreferences([opts.codec]);
+  //       }
+
+  //       sender = trx.sender;
+  //   } else {
+  //       sender = await this.pc.addTrack(track, stream);
+  //   }
+
+  //   if (!this.senders[track.id]) {
+  //       this.senders[track.id] = [];
+  //   }
+
+  //   this.senders[track.id].push(sender);
+  // }
+
+  // public replaceTrack(oldTrackID: string, newTrack: MediaStreamTrack | null) {
+  //   const senders = this.senders[oldTrackID];
+  //   if (!senders) {
+  //       throw new Error('senders for track not found');
+  //   }
+
+  //   if (newTrack && newTrack.id !== oldTrackID) {
+  //       delete this.senders[oldTrackID];
+  //       this.senders[newTrack.id] = senders;
+  //   }
+
+  //   for (const sender of senders) {
+  //       sender.replaceTrack(newTrack);
+  //   }
+  // }
 
   public async createOffer() {
     if (!this.pc) {
@@ -164,6 +224,7 @@ export default class CloudflareCallsClient extends EventEmitter {
   private streams: MediaStream[];
   private remoteScreenTrack: MediaStreamTrack | null = null;
   private remoteVoiceTracks: MediaStreamTrack[]
+  private voiceTrackAdded: boolean;
   private stream: MediaStream | null;
   public audioTrack: MediaStreamTrack | null;
   private audioDevices: AudioDevices;
@@ -181,6 +242,7 @@ export default class CloudflareCallsClient extends EventEmitter {
     this.currentAudioInputDevice = null;
     this.currentAudioOutputDevice = null;
     this.remoteVoiceTracks = [];
+    this.voiceTrackAdded = false;
     this.streams = [];
     this.stream = null;
     this.audioDevices = {inputs: [], outputs: []};
@@ -498,6 +560,25 @@ export default class CloudflareCallsClient extends EventEmitter {
             }
         }
     });
+  }
+
+  public mute() {
+    if (!this.peer || !this.audioTrack || !this.stream) {
+      return;
+    }
+
+    logDebug('replacing track to peer', null);
+
+    // @ts-ignore: we actually mean (and need) to pass null here
+    // this.peer.replaceTrack(this.audioTrack.id, null);
+
+    this.audioTrack.enabled = false;
+
+    this.emit('mute');
+
+    if (this.ws) {
+        this.ws.send('mute');
+    }
   }
 
   public async unmute() {
