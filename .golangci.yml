@@ -10,6 +10,8 @@ linters-settings:
     disable:
       - fieldalignment
       - shadow
+  goimports:
+    local-prefixes: github.com/kondo97/mattermost-cloudflare-calls
 
 linters:
   disable-all: true
