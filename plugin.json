@@ -1,9 +1,9 @@
 {
-  "id": "com.mattermost.calls",
-  "name": "Calls",
+  "id": "com.mattermostl.cloudflare.calls",
+  "name": "Mattermost Cloudflare Calls",
   "description": "Integrates real-time voice communication in Mattermost",
-  "homepage_url": "https://github.com/mattermost/mattermost-plugin-calls/",
-  "support_url": "https://github.com/mattermost/mattermost-plugin-calls/issues",
+  "homepage_url": "https://github.com/kondo97/mattermost-cloudflare-calls/",
+  "support_url": "https://github.com/kondo97/mattermost-cloudflare-calls/issues",
   "icon_path": "assets/plugin_icon.svg",
   "min_server_version": "10.0.0",
   "server": {
