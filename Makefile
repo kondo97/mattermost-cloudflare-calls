@@ -217,6 +217,7 @@ else
 	cd server && env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GO) build $(GO_BUILD_FLAGS) -ldflags '$(LDFLAGS)' -trimpath -o dist/plugin-linux-arm64;
 	cd server && env CGO_ENABLED=0 GOOS=freebsd GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -ldflags '$(LDFLAGS)' -trimpath -o dist/plugin-freebsd-amd64;
 	cd server && env CGO_ENABLED=0 GOOS=openbsd GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -ldflags '$(LDFLAGS)' -trimpath -o dist/plugin-openbsd-amd64;
+	cd server && env CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 $(GO) build $(GO_BUILD_FLAGS) -ldflags '$(LDFLAGS)' -trimpath -o dist/plugin-openbsd-amd64;
 endif
 else
 	$(info DEBUG mode is on; to disable, unset MM_DEBUG)
@@ -227,6 +228,7 @@ else
 	cd server && env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GO) build $(GO_BUILD_FLAGS) -ldflags '$(LDFLAGS)' -gcflags "all=-N -l" -trimpath -o dist/plugin-linux-arm64;
 	cd server && env CGO_ENABLED=0 GOOS=freebsd GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -ldflags '$(LDFLAGS)' -gcflags "all=-N -l" -trimpath -o dist/plugin-freebsd-amd64;
 	cd server && env CGO_ENABLED=0 GOOS=openbsd GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -ldflags '$(LDFLAGS)' -gcflags "all=-N -l" -trimpath -o dist/plugin-openbsd-amd64;
+	cd server && env CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 $(GO) build $(GO_BUILD_FLAGS) -ldflags '$(LDFLAGS)' -gcflags "all=-N -l" -trimpath -o dist/plugin-openbsd-amd64;
 endif
 endif
 endif
