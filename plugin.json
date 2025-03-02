@@ -1,5 +1,5 @@
 {
-  "id": "com.mattermostl.cloudflare.calls",
+  "id": "com.mattermost.cloudflare.calls",
   "name": "Mattermost Cloudflare Calls",
   "description": "Integrates real-time voice communication in Mattermost",
   "homepage_url": "https://github.com/kondo97/mattermost-cloudflare-calls/",
