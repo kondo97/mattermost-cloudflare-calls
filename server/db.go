@@ -6,7 +6,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/db"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/db"
 	"github.com/mattermost/mattermost/server/public/shared/driver"
 
 	"github.com/mattermost/morph/models"

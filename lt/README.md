@@ -13,7 +13,7 @@
 ### Clone the repository
 
 ```
-git clone https://github.com/mattermost/mattermost-plugin-calls.git && cd mattermost-plugin-calls
+git clone https://github.com/kondo97/mattermost-cloudflare-calls.git && cd mattermost-plugin-calls
 ```
 
 ### Run on a team

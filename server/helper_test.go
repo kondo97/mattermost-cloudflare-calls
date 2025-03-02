@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/db"
-	"github.com/mattermost/mattermost-plugin-calls/server/testutils"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/db"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/testutils"
 
-	serverMocks "github.com/mattermost/mattermost-plugin-calls/server/mocks/github.com/mattermost/mattermost-plugin-calls/server/interfaces"
-	mlogMocks "github.com/mattermost/mattermost-plugin-calls/server/mocks/github.com/mattermost/mattermost/server/public/shared/mlog"
+	serverMocks "github.com/kondo97/mattermost-cloudflare-calls/server/mocks/github.com/kondo97/mattermost-cloudflare-calls/server/interfaces"
+	mlogMocks "github.com/kondo97/mattermost-cloudflare-calls/server/mocks/github.com/mattermost/mattermost/server/public/shared/mlog"
 
 	"github.com/mattermost/mattermost/server/public/model"
 

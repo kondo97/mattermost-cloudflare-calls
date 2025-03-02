@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/telemetry"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/telemetry"
 
 	"github.com/mattermost/mattermost/server/public/model"
 

@@ -72,7 +72,7 @@ jobs:
 
       - name: e2e-report/generate-summary
         run: |
-          echo "### Playwright Results for [${{ github.event.workflow_run.head_sha }}](https://github.com/mattermost/mattermost-plugin-calls/commit/${{ github.event.workflow_run.head_sha }})" >> "${GITHUB_STEP_SUMMARY}"
+          echo "### Playwright Results for [${{ github.event.workflow_run.head_sha }}](https://github.com/kondo97/mattermost-cloudflare-calls/commit/${{ github.event.workflow_run.head_sha }})" >> "${GITHUB_STEP_SUMMARY}"
           echo "We had ${{ steps.stats.outputs.FAILURES }} failures" >> "${GITHUB_STEP_SUMMARY}"
           echo "We had ${{ steps.stats.outputs.SUCCESSES }} successes" >> "${GITHUB_STEP_SUMMARY}"
           echo "You can find the report [here](${{ steps.stats.outputs.S3_REPORT }})" >> "${GITHUB_STEP_SUMMARY}"

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/public"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/public"
 
 	sq "github.com/mattermost/squirrel"
 )

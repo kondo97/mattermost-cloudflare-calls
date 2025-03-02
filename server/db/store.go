@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/interfaces"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/interfaces"
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/shared/mlog"
 

@@ -11,10 +11,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/batching"
-	"github.com/mattermost/mattermost-plugin-calls/server/public"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/batching"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/public"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/db"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/db"
 
 	rtcd "github.com/mattermost/rtcd/service"
 	"github.com/mattermost/rtcd/service/rtc"

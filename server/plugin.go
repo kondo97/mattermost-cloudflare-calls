@@ -12,12 +12,12 @@ import (
 
 	"golang.org/x/time/rate"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/batching"
-	"github.com/mattermost/mattermost-plugin-calls/server/cluster"
-	"github.com/mattermost/mattermost-plugin-calls/server/db"
-	"github.com/mattermost/mattermost-plugin-calls/server/enterprise"
-	"github.com/mattermost/mattermost-plugin-calls/server/interfaces"
-	"github.com/mattermost/mattermost-plugin-calls/server/telemetry"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/batching"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/cluster"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/db"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/enterprise"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/interfaces"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/telemetry"
 
 	"github.com/mattermost/rtcd/service/rtc"
 

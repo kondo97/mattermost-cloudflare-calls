@@ -11,9 +11,9 @@ import (
 
 	"golang.org/x/time/rate"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/batching"
-	"github.com/mattermost/mattermost-plugin-calls/server/db"
-	"github.com/mattermost/mattermost-plugin-calls/server/public"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/batching"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/db"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/public"
 
 	"github.com/mattermost/mattermost/server/public/model"
 )

@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/cluster"
-	"github.com/mattermost/mattermost-plugin-calls/server/enterprise"
-	"github.com/mattermost/mattermost-plugin-calls/server/license"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/cluster"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/enterprise"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/license"
 
 	"github.com/mattermost/rtcd/service/rtc"
 

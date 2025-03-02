@@ -19,7 +19,7 @@ require (
 	github.com/mattermost/calls-recorder v0.8.1
 	github.com/mattermost/calls-transcriber v0.6.1
 	github.com/mattermost/logr/v2 v2.0.21
-	github.com/mattermost/mattermost-plugin-calls/server/public v0.0.3
+	github.com/kondo97/mattermost-cloudflare-calls/server/public v0.1.0
 	github.com/mattermost/mattermost/server/public v0.1.10
 	github.com/mattermost/morph v1.1.0
 	github.com/mattermost/rtcd v1.0.1
@@ -35,7 +35,7 @@ require (
 
 replace github.com/pion/interceptor v0.1.37 => github.com/streamer45/interceptor v0.0.0-20250106110758-7e0fb613abef
 
-replace github.com/mattermost/mattermost-plugin-calls/server/public => ./server/public
+replace github.com/kondo97/mattermost-cloudflare-calls/server/public => ./server/public
 
 require (
 	dario.cat/mergo v1.0.1 // indirect

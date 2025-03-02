@@ -6,7 +6,7 @@ package db
 import (
 	"testing"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/public"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/public"
 
 	"github.com/mattermost/mattermost/server/public/model"
 

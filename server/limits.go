@@ -12,7 +12,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/license"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/license"
 
 	"github.com/mattermost/mattermost/server/public/model"
 )

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mattermost/mattermost-plugin-calls/server/cluster"
+	"github.com/kondo97/mattermost-cloudflare-calls/server/cluster"
 )
 
 const (
