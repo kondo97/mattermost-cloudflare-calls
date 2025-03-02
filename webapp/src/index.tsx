@@ -109,7 +109,8 @@ import {
     USER_UNMUTED,
     USERS_STATES,
 } from './action_types';
-import CallsClient from './client';
+// import CallsClient from './client';
+import  CloudflareCallsClient from './cloudflare_client';
 import CallWidget from './components/call_widget';
 import ChannelCallToast from './components/channel_call_toast';
 import ChannelHeaderButton from './components/channel_header_button';
@@ -659,7 +660,14 @@ export default class Plugin {
                     }
                 }
 
-                window.callsClient = new CallsClient({
+                // window.callsClient = new CallsClient({
+                //     wsURL: getWSConnectionURL(getConfig(state)),
+                //     iceServers: iceConfigs,
+                //     simulcast: callsConfig(state).EnableSimulcast,
+                //     enableAV1: callsConfig(state).EnableAV1,
+                //     dcSignaling: callsConfig(state).EnableDCSignaling,
+                // });
+                window.callsClient = new CloudflareCallsClient({
                     wsURL: getWSConnectionURL(getConfig(state)),
                     iceServers: iceConfigs,
                     simulcast: callsConfig(state).EnableSimulcast,
@@ -1062,7 +1070,8 @@ declare global {
     interface Window {
         registerPlugin(id: string, plugin: Plugin): void,
 
-        callsClient?: CallsClient,
+        // callsClient?: CallsClient,
+        callsClient?: CloudflareCallsClient,
         webkitAudioContext: AudioContext,
         basename: string,
 
