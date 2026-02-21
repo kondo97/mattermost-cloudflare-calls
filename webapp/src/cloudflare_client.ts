@@ -172,8 +172,6 @@ class RTCPeer extends EventEmitter {
     }
    logDebug('RTCPeer.signal: handling remote signaling data', data);
 
-   console.log('signal', data);
-
     const msg = JSON.parse(data);
 
     const connected = new Promise((res, rej) => {
