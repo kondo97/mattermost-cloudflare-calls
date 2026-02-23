@@ -55,6 +55,7 @@ const (
 	wsEventHostScreenOff             = "host_screen_off"
 	wsEventHostLowerHand             = "host_lower_hand"
 	wsEventHostRemoved               = "host_removed"
+	wsEventAddUser                   = "add_user"
 
 	wsReconnectionTimeout = 10 * time.Second
 
@@ -322,6 +323,15 @@ func (p *Plugin) handleClientMsg(us *session, msg clientMessage, handlerID strin
 				return err
 			}
 		}
+	case clientMessageTypeAddUser:
+		rtcMsg := rtc.Message{
+			SessionID: us.originalConnID,
+			Type:      rtc.SDPMessage,
+			Data:      msg.Data,
+		}
+		if err := p.handleAddUserForCloudflare(rtcMsg, us.callID); err != nil {
+			return fmt.Errorf("failed to handle add user: %w", err)
+		}
 	case clientMessageTypeMute, clientMessageTypeUnmute:
 		if handlerID != p.nodeID {
 			// need to relay track event.
@@ -347,7 +357,7 @@ func (p *Plugin) handleClientMsg(us *session, msg clientMessage, handlerID strin
 				Data:      msg.Data,
 			}
 
-			if err := p.sendRTCMessage(rtcMsg, us.callID); err != nil {
+			if err := p.sendRTCMessageForCloudflare(rtcMsg, us.callID); err != nil {
 				return fmt.Errorf("failed to send RTC message: %w", err)
 			}
 		}
@@ -802,33 +812,33 @@ func (p *Plugin) handleJoin(userID, connID, authSessionID string, joinData calls
 			}
 
 			if handlerID == p.nodeID {
-				cfg := rtc.SessionConfig{
-					GroupID:   "default",
-					CallID:    us.callID,
-					UserID:    userID,
-					SessionID: connID,
-					Props: rtc.SessionProps{
-						"channelID":   channelID,
-						"av1Support":  joinData.AV1Support,
-						"dcSignaling": joinData.DCSignaling,
-					},
-				}
+				// cfg := rtc.SessionConfig{
+				// 	GroupID:   "default",
+				// 	CallID:    us.callID,
+				// 	UserID:    userID,
+				// 	SessionID: connID,
+				// 	Props: rtc.SessionProps{
+				// 		"channelID":   channelID,
+				// 		"av1Support":  joinData.AV1Support,
+				// 		"dcSignaling": joinData.DCSignaling,
+				// 	},
+				// }
 				p.LogDebug("initializing RTC session", "userID", userID, "connID", connID, "channelID", channelID, "callID", us.callID)
-				if err = p.rtcServer.InitSession(cfg, func() error {
-					if atomic.CompareAndSwapInt32(&us.rtcClosed, 0, 1) {
-						close(us.rtcCloseCh)
-						return p.removeSession(us)
-					}
-					return nil
-				}); err != nil {
-					p.LogError("failed to init session", "err", err.Error())
-					go func() {
-						if err := p.handleLeave(us, userID, connID, channelID, handlerID); err != nil {
-							p.LogError(err.Error())
-						}
-					}()
-					return state
-				}
+				// if err = p.rtcServer.InitSession(cfg, func() error {
+				// 	if atomic.CompareAndSwapInt32(&us.rtcClosed, 0, 1) {
+				// 		close(us.rtcCloseCh)
+				// 		return p.removeSession(us)
+				// 	}
+				// 	return nil
+				// }); err != nil {
+				// 	p.LogError("failed to init session", "err", err.Error())
+				// 	go func() {
+				// 		if err := p.handleLeave(us, userID, connID, channelID, handlerID); err != nil {
+				// 			p.LogError(err.Error())
+				// 		}
+				// 	}()
+				// 	return state
+				// }
 			} else {
 				if err := p.sendClusterMessage(clusterMessage{
 					ConnID:    connID,
@@ -1261,14 +1271,41 @@ func (p *Plugin) WebSocketMessageHasBeenPosted(connID, userID string, req *model
 		}
 		return
 	case clientMessageTypeSDP:
-		msgData, ok := req.Data["data"].([]byte)
+		sdp, ok := req.Data["sdp"].([]byte)
 		if !ok {
 			p.LogError("invalid or missing sdp data")
 			return
 		}
-		data, err := unpackSDPData(msgData)
+		unpackedSDP, err := unpackSDPData(sdp)
 		if err != nil {
 			p.LogError(err.Error())
+			return
+		}
+
+		tracks, ok := req.Data["tracks"].([]interface{})
+		if !ok {
+			p.LogError("invalid or missing tracks data")
+			return
+		}
+
+		data, err := json.Marshal(map[string]interface{}{
+			"sdp":    unpackedSDP,
+			"tracks": tracks,
+		})
+		if err != nil {
+			p.LogError("failed to marshal data", "error", err)
+			return
+		}
+		msg.Data = data
+	case clientMessageTypeAddUser:
+		tracks, ok := req.Data["tracks"].([]interface{})
+		if !ok {
+			p.LogError("invalid or missing tracks data")
+			return
+		}
+		data, err := json.Marshal(tracks)
+		if err != nil {
+			p.LogError("failed to marshal tracks", "error", err)
 			return
 		}
 		msg.Data = data
