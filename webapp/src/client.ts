@@ -336,7 +336,33 @@ export default class CallsClient extends EventEmitter {
                     data: zlibSync(strToU8(payload)),
                 }, true);
             };
-            peer.on('offer', sdpHandler);
+                        const sdpandtrackHandler = (sdp: RTCSessionDescription) => {
+                const payload = JSON.stringify(sdp);
+
+                const transceivers: RTCRtpTransceiver[] = this.streams.flatMap((stream) => {
+                    return stream.getTracks().map((track) => {
+                      const localPeerConnection = (this.peer as any).pc;
+                      return localPeerConnection.addTransceiver(track, {
+                        direction: "sendonly",
+                      });
+                    });
+                  });
+                // SDP data is compressed using zlib since it's text based
+                // and can grow substantially, potentially hitting the maximum
+                // message size (4KB).
+                ws.send('sdp', {
+                    data: {
+                      sdp: zlibSync(strToU8(payload)),
+                      tracks: transceivers.map(({ mid, sender }) => ({
+                        location: "local",
+                        mid,
+                        trackName: sender.track?.id,
+                      })),
+                    }
+                }, true);
+            }
+            peer.on('offer', sdpandtrackHandler);
+            // peer.on('offer', sdpHandler);
             peer.on('answer', sdpHandler);
 
             peer.on('candidate', (candidate) => {
@@ -394,6 +420,7 @@ export default class CallsClient extends EventEmitter {
             if (msg.type === 'answer' || msg.type === 'offer' || msg.type === 'candidate') {
                 if (this.peer) {
                     await this.peer.signal(data);
+                    this.connected = true
                 }
             }
         });
