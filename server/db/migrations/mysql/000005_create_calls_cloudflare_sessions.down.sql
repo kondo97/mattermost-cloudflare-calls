@@ -1,0 +1,4 @@
+DROP INDEX idx_calls_cloudflare_sessions_mm_session_id ON calls_cloudflare_sessions;
+DROP INDEX idx_calls_cloudflare_sessions_call_id ON calls_cloudflare_sessions;
+
+DROP TABLE IF EXISTS calls_cloudflare_sessions;

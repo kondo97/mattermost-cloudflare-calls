@@ -754,7 +754,7 @@ func TestHandleJoin(t *testing.T) {
 		mockRTCMetrics.On("IncRTCSessions", "default").Once()
 
 		mockMetrics.On("IncWebSocketEvent", "out", wsEventJoin).Once()
-		mockAPI.On("PublishWebSocketEvent", wsEventJoin, map[string]any{"connID": connID},
+		mockAPI.On("PublishWebSocketEvent", wsEventJoin, map[string]any{"connID": connID, "first_join": true},
 			&model.WebsocketBroadcast{ConnectionId: connID, ReliableClusterSend: true}).Once()
 
 		// DEPRECATED
@@ -904,7 +904,7 @@ func TestHandleJoin(t *testing.T) {
 			mockRTCMetrics.On("IncRTCSessions", "default").Once()
 
 			mockMetrics.On("IncWebSocketEvent", "out", wsEventJoin).Once()
-			mockAPI.On("PublishWebSocketEvent", wsEventJoin, map[string]any{"connID": connID},
+			mockAPI.On("PublishWebSocketEvent", wsEventJoin, map[string]any{"connID": connID, "first_join": true},
 				&model.WebsocketBroadcast{ConnectionId: connID, ReliableClusterSend: true}).Once()
 
 			// DEPRECATED
@@ -1286,7 +1286,7 @@ func TestHandleJoin(t *testing.T) {
 		mockRTCMetrics.On("IncRTCSessions", "default").Once()
 
 		mockMetrics.On("IncWebSocketEvent", "out", wsEventJoin).Once()
-		mockAPI.On("PublishWebSocketEvent", wsEventJoin, map[string]any{"connID": connID},
+		mockAPI.On("PublishWebSocketEvent", wsEventJoin, map[string]any{"connID": connID, "first_join": true},
 			&model.WebsocketBroadcast{ConnectionId: connID, ReliableClusterSend: true}).Once()
 
 		// DEPRECATED
