@@ -139,6 +139,11 @@ type clientConfig struct {
 	GroupCallsAllowed bool
 	// When set to true it enables experimental support for using the data channel for signaling.
 	EnableDCSignaling *bool
+
+	// Cloudflare Calls App ID
+	CloudflareCallsAppID string
+	// Cloudflare Calls App Token (secret)
+	CloudflareCallsAppToken string
 }
 
 type adminClientConfig struct {
@@ -350,6 +355,12 @@ func (c *configuration) IsValid() error {
 			return fmt.Errorf("LiveCaptionsLanguage is not valid: should be a 2-letter ISO 639 set 1 language code, or blank for default")
 		}
 	}
+
+	// Cloudflare Calls: either both AppID and AppToken are set, or neither
+	if (c.CloudflareCallsAppID == "") != (c.CloudflareCallsAppToken == "") {
+		return fmt.Errorf("CloudflareCallsAppID and CloudflareCallsAppToken must both be set or both be empty")
+	}
+
 	return nil
 }
 
@@ -463,6 +474,9 @@ func (c *configuration) Clone() *configuration {
 	if c.EnableDCSignaling != nil {
 		cfg.EnableDCSignaling = model.NewPointer(*c.EnableDCSignaling)
 	}
+
+	cfg.CloudflareCallsAppID = c.CloudflareCallsAppID
+	cfg.CloudflareCallsAppToken = c.CloudflareCallsAppToken
 
 	return &cfg
 }

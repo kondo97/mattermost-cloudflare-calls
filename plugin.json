@@ -396,6 +396,32 @@
             "help_text": "The language passed to the live captions transcriber. Should be a 2-letter ISO 639 Set 1 language code, e.g. 'en'. If blank, will be set to English 'en' as default."
           }
         ]
+      },
+      {
+        "key": "CloudflareCalls",
+        "title": "Cloudflare Calls",
+        "subtitle": "Configure Cloudflare Calls as the WebRTC backend for this plugin",
+        "custom": false,
+        "settings": [
+          {
+            "key": "CloudflareCallsAppID",
+            "display_name": "Cloudflare Calls App ID",
+            "type": "text",
+            "help_text": "The App ID for your Cloudflare Calls application. When set together with CloudflareCallsAppToken, calls will be routed through the Cloudflare Calls API.",
+            "default": "",
+            "placeholder": "your-cloudflare-calls-app-id",
+            "hosting": "on-prem"
+          },
+          {
+            "key": "CloudflareCallsAppToken",
+            "display_name": "Cloudflare Calls App Token",
+            "type": "text",
+            "help_text": "The secret App Token for your Cloudflare Calls application.",
+            "default": "",
+            "placeholder": "your-cloudflare-calls-app-token",
+            "hosting": "on-prem"
+          }
+        ]
       }
     ],
     "settings": [
@@ -711,6 +737,24 @@
         "type": "bool",
         "default": false,
         "help_text": "When set to true, clients will use WebRTC data channels for signaling of new media tracks. This can result in a more efficient and less race-prone process, especially in case of frequent WebSocket disconnections."
+      },
+      {
+        "key": "CloudflareCallsAppID",
+        "display_name": "Cloudflare Calls App ID",
+        "type": "text",
+        "help_text": "The App ID for your Cloudflare Calls application. When set together with CloudflareCallsAppToken, calls will be routed through the Cloudflare Calls API.",
+        "default": "",
+        "placeholder": "your-cloudflare-calls-app-id",
+        "hosting": "on-prem"
+      },
+      {
+        "key": "CloudflareCallsAppToken",
+        "display_name": "Cloudflare Calls App Token",
+        "type": "text",
+        "help_text": "The secret App Token for your Cloudflare Calls application.",
+        "default": "",
+        "placeholder": "your-cloudflare-calls-app-token",
+        "hosting": "on-prem"
       }
     ]
   },

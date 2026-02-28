@@ -1497,24 +1497,43 @@ func (p *Plugin) handleMetricMessage(metricName public.MetricName, userID string
 }
 
 const (
-	cloudflareAppID    = "5a11beb519a5f360006faa9249830037"
-	cloudflareAppToken = "af68e58c1025bed9103f8014b46d0ba8ed2ec74c659e79f8893db67185d7a5c1"
-	cloudflareAPIBase  = "https://rtc.live.cloudflare.com/v1/apps/" + cloudflareAppID
+	cloudflareAPIBaseURL = "https://rtc.live.cloudflare.com/v1/apps"
 )
 
-func cloudflareAuthHeader() string {
-	return "Bearer " + cloudflareAppToken
+func (p *Plugin) cloudflareAPIBase() (string, error) {
+	cfg := p.getConfiguration()
+	if cfg == nil || cfg.CloudflareCallsAppID == "" {
+		return "", fmt.Errorf("CloudflareCallsAppID is not configured")
+	}
+	return cloudflareAPIBaseURL + "/" + cfg.CloudflareCallsAppID, nil
+}
+
+func (p *Plugin) cloudflareAuthHeader() (string, error) {
+	cfg := p.getConfiguration()
+	if cfg == nil || cfg.CloudflareCallsAppToken == "" {
+		return "", fmt.Errorf("CloudflareCallsAppToken is not configured")
+	}
+	return "Bearer " + cfg.CloudflareCallsAppToken, nil
 }
 
 func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
+	apiBase, err := p.cloudflareAPIBase()
+	if err != nil {
+		return fmt.Errorf("cloudflare not configured: %w", err)
+	}
+	authHeader, err := p.cloudflareAuthHeader()
+	if err != nil {
+		return fmt.Errorf("cloudflare not configured: %w", err)
+	}
+
 	client := &http.Client{}
 
 	// POST /apps/{appId}/sessions/new でセッションを新規作成
-	req, err := http.NewRequest("POST", cloudflareAPIBase+"/sessions/new", nil)
+	req, err := http.NewRequest("POST", apiBase+"/sessions/new", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create new session request: %w", err)
 	}
-	req.Header.Add("Authorization", cloudflareAuthHeader())
+	req.Header.Add("Authorization", authHeader)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -1606,12 +1625,12 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 		return fmt.Errorf("failed to marshal tracks request: %w", err)
 	}
 
-	req, err = http.NewRequest("POST", cloudflareAPIBase+"/sessions/"+cfSessionID+"/tracks/new", bytes.NewReader(jsonBody))
+	req, err = http.NewRequest("POST", apiBase+"/sessions/"+cfSessionID+"/tracks/new", bytes.NewReader(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create tracks/new request: %w", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", cloudflareAuthHeader())
+	req.Header.Add("Authorization", authHeader)
 
 	resp, err = client.Do(req)
 	if err != nil {
@@ -1655,8 +1674,16 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 }
 
 func (p *Plugin) handleIceMessage(mmSessionID string, data []byte) error {
+	apiBase, err := p.cloudflareAPIBase()
+	if err != nil {
+		return fmt.Errorf("cloudflare not configured: %w", err)
+	}
+	authHeader, err := p.cloudflareAuthHeader()
+	if err != nil {
+		return fmt.Errorf("cloudflare not configured: %w", err)
+	}
+
 	// ICE candidate を Cloudflare Calls API に転送する
-	// GET /apps/{appId}/sessions/{sessionId} で Cloudflare セッションを取得
 	cfSession, err := p.store.GetCallCloudflareSession(mmSessionID)
 	if err != nil {
 		// セッションが未作成の場合（SDPより先にICEが来ることはないが一応スキップ）
@@ -1667,14 +1694,14 @@ func (p *Plugin) handleIceMessage(mmSessionID string, data []byte) error {
 	// data = JSON 文字列の ICE candidate
 	// Cloudflare Calls API: PUT /apps/{appId}/sessions/{sessionId}/ice
 	req, err := http.NewRequest("PUT",
-		cloudflareAPIBase+"/sessions/"+cfSession.CloudflareCallSessionID+"/ice",
+		apiBase+"/sessions/"+cfSession.CloudflareCallSessionID+"/ice",
 		bytes.NewReader(data),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create ICE request: %w", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", cloudflareAuthHeader())
+	req.Header.Add("Authorization", authHeader)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -1692,6 +1719,15 @@ func (p *Plugin) handleIceMessage(mmSessionID string, data []byte) error {
 }
 
 func (p *Plugin) handleAddUser(msg rtc.Message, callID string) error {
+	apiBase, err := p.cloudflareAPIBase()
+	if err != nil {
+		return fmt.Errorf("cloudflare not configured: %w", err)
+	}
+	authHeader, err := p.cloudflareAuthHeader()
+	if err != nil {
+		return fmt.Errorf("cloudflare not configured: %w", err)
+	}
+
 	// msg.Data は {"tracks": [...]} 形式のJSONエンコード済みデータ
 	var dataMap map[string]interface{}
 	if err := json.Unmarshal(msg.Data, &dataMap); err != nil {
@@ -1735,14 +1771,14 @@ func (p *Plugin) handleAddUser(msg rtc.Message, callID string) error {
 
 	client := &http.Client{}
 	req, err := http.NewRequest("POST",
-		cloudflareAPIBase+"/sessions/"+cfSession.CloudflareCallSessionID+"/tracks/new",
+		apiBase+"/sessions/"+cfSession.CloudflareCallSessionID+"/tracks/new",
 		bytes.NewReader(jsonBody),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create add_user tracks/new request: %w", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", cloudflareAuthHeader())
+	req.Header.Add("Authorization", authHeader)
 
 	resp, err := client.Do(req)
 	if err != nil {
