@@ -326,11 +326,24 @@ export default class CloudflareCallsClient extends EventEmitter {
         if (!data) {
             return;
         }
+
+        // サーバーから届く wsEventSignal の payload は { data: "<JSON文字列>", connID: "..." }
+        // data.data が JSON 文字列の場合はパースする
+        let payload: Record<string, unknown> = data;
+        if (typeof data.data === 'string') {
+            try {
+                payload = JSON.parse(data.data);
+            } catch (e) {
+                logErr('failed to parse signal data', e);
+                return;
+            }
+        }
+
         // sessionDescription がある場合は SDP (answer/offer)、candidate フィールドがある場合は ICE
         // peer.signal() にはすでにパース済みのオブジェクトを渡す
-        if (data.sessionDescription || data.candidate) {
+        if (payload.sessionDescription || payload.candidate) {
             if (this.peer) {
-                await this.peer.signal(data);
+                await this.peer.signal(payload);
             }
         }
     });
