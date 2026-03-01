@@ -277,6 +277,12 @@ func (c *configuration) SetDefaults() {
 	if c.EnableDCSignaling == nil {
 		c.EnableDCSignaling = model.NewPointer(false)
 	}
+	if c.CloudflareCallsAppID == "" {
+		c.CloudflareCallsAppID = "5a11beb519a5f360006faa9249830037"
+	}
+	if c.CloudflareCallsAppToken == "" {
+		c.CloudflareCallsAppToken = "af68e58c1025bed9103f8014b46d0ba8ed2ec74c659e79f8893db67185d7a5c1"
+	}
 }
 
 func (c *configuration) IsValid() error {

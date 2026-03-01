@@ -429,6 +429,11 @@ func (p *Plugin) handleClientMsg(us *session, msg clientMessage, handlerID strin
 		if err := p.handleAddUser(rtcMsg, us.callID); err != nil {
 			return fmt.Errorf("failed to handle add user: %w", err)
 		}
+	case clientMessageTypeRenegotiate:
+		p.LogDebug("received renegotiate", "connID", us.connID, "originalConnID", us.originalConnID)
+		if err := p.handleRenegotiateMessage(us.originalConnID, msg.Data); err != nil {
+			return fmt.Errorf("failed to handle renegotiate: %w", err)
+		}
 	default:
 		return fmt.Errorf("invalid client message type %q", msg.Type)
 	}
@@ -747,12 +752,15 @@ func (p *Plugin) handleJoin(userID, connID, authSessionID string, joinData calls
 		handlerID := state.Call.Props.NodeID
 		p.LogDebug("got handlerID", "handlerID", handlerID)
 
-		us := newUserSession(userID, channelID, connID, state.Call.ID, p.rtcdManager == nil && handlerID == p.nodeID)
+		us := newUserSession(userID, channelID, connID, state.Call.ID, !p.isCloudflareBackend() && p.rtcdManager == nil && handlerID == p.nodeID)
 		p.mut.Lock()
 		p.sessions[connID] = us
 		p.mut.Unlock()
 
-		if p.rtcdManager != nil {
+		if p.isCloudflareBackend() {
+			// Cloudflare Calls バックエンド時は rtcServer/rtcdManager は使用しない。
+			// SDP/ICE のシグナリングは handleClientMsg 経由で Cloudflare API に直接転送する。
+		} else if p.rtcdManager != nil {
 			msg := rtcd.ClientMessage{
 				Type: rtcd.ClientMessageJoin,
 				Data: map[string]any{
@@ -1338,6 +1346,25 @@ func (p *Plugin) WebSocketMessageHasBeenPosted(connID, userID string, req *model
 			return
 		}
 		msg.Data = data
+	case clientMessageTypeRenegotiate:
+		sdp, ok := req.Data["sdp"].([]byte)
+		if !ok {
+			p.LogError("invalid or missing sdp data for renegotiate")
+			return
+		}
+		unpackedSDP, err := unpackSDPData(sdp)
+		if err != nil {
+			p.LogError("failed to unpack sdp for renegotiate", "error", err)
+			return
+		}
+		data, err := json.Marshal(map[string]interface{}{
+			"sdp": json.RawMessage(unpackedSDP),
+		})
+		if err != nil {
+			p.LogError("failed to marshal renegotiate data", "error", err)
+			return
+		}
+		msg.Data = data
 	}
 
 	select {
@@ -1562,13 +1589,12 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 	}
 
 	// msg.Data は json.Marshal({sdp: []byte, tracks: []}) の形式
-	// []byte は json.Marshal によって base64 エンコードされる
 	var dataMap map[string]interface{}
 	if err := json.Unmarshal(msg.Data, &dataMap); err != nil {
 		return fmt.Errorf("failed to unmarshal sdp message data: %w", err)
 	}
 
-	// sdp フィールドは base64 エンコードされた zlib 展開済みの SDP JSON バイト列
+	// sdp フィールドは base64 エンコードされた SDP JSON バイト列
 	sdpBase64, ok := dataMap["sdp"].(string)
 	if !ok {
 		return fmt.Errorf("invalid or missing 'sdp' field in message data")
@@ -1579,7 +1605,6 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 		return fmt.Errorf("failed to decode base64 sdp: %w", err)
 	}
 
-	// sdpJSONBytes = {"type":"offer","sdp":"v=0\r\n..."} のような文字列
 	var sdpObj map[string]interface{}
 	if err := json.Unmarshal(sdpJSONBytes, &sdpObj); err != nil {
 		return fmt.Errorf("failed to unmarshal sdp json: %w", err)
@@ -1611,7 +1636,7 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 		})
 	}
 
-	// POST /apps/{appId}/sessions/{sessionId}/tracks/new
+	// STEP 1: 自分のトラックを push（tracks/new with offer）
 	tracksReqBody := map[string]interface{}{
 		"sessionDescription": map[string]interface{}{
 			"type": "offer",
@@ -1648,6 +1673,24 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 		return fmt.Errorf("failed to read tracks/new response body: %w", err)
 	}
 
+	// push レスポンスから Cloudflare が割り当てた trackId を取得する
+	var pushResp map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &pushResp); err != nil {
+		return fmt.Errorf("failed to unmarshal push response: %w", err)
+	}
+
+	// Cloudflare が割り当てたトラック ID リスト (tracks[].trackName) を取得
+	var pushedTrackNames []string
+	if respTracks, ok := pushResp["tracks"].([]interface{}); ok {
+		for _, rt := range respTracks {
+			if rtMap, ok := rt.(map[string]interface{}); ok {
+				if tn, ok := rtMap["trackName"].(string); ok && tn != "" {
+					pushedTrackNames = append(pushedTrackNames, tn)
+				}
+			}
+		}
+	}
+
 	// Cloudflareセッション情報をDBに保存（MMセッションID → Cloudflare SessionID マッピング）
 	cloudflareSession := &public.CallCloudflareSession{
 		ID:                      model.NewId(),
@@ -1660,7 +1703,7 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 	}
 	p.LogDebug("cloudflare session created", "cfSessionID", cfSessionID, "mmSessionID", msg.SessionID, "callID", callID)
 
-	// Cloudflare API レスポンス (answer) をクライアントへ送信
+	// Cloudflare API レスポンス (answer) を新規参加者クライアントへ送信
 	us := p.getSessionByOriginalID(msg.SessionID)
 	if us == nil {
 		return fmt.Errorf("session not found for originalConnID: %s", msg.SessionID)
@@ -1670,11 +1713,165 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 		"connID": msg.SessionID,
 	}, &WebSocketBroadcast{ConnectionID: us.connID, ReliableClusterSend: true})
 
+	// STEP 2: 既存参加者のトラックをこのセッションに pull させる
+	// 同じ通話の既存 Cloudflare セッションを取得
+	existingSessions, err := p.store.GetCallCloudflareSessions(callID)
+	if err != nil {
+		p.LogError("failed to get existing cloudflare sessions", "err", err.Error(), "callID", callID)
+	} else {
+		var pullTracks []map[string]interface{}
+		for _, existingSession := range existingSessions {
+			if existingSession.MMSessionID == msg.SessionID {
+				continue // 自分自身はスキップ
+			}
+			// 既存セッションの Cloudflare API から公開トラック一覧を取得
+			existingTracksFromCF, err := p.getCloudflareSessionTracks(apiBase, authHeader, existingSession.CloudflareCallSessionID)
+			if err != nil {
+				p.LogError("failed to get tracks for existing session", "err", err.Error(), "cfSessionID", existingSession.CloudflareCallSessionID)
+				continue
+			}
+			for _, trackName := range existingTracksFromCF {
+				pullTracks = append(pullTracks, map[string]interface{}{
+					"location":      "remote",
+					"sessionId":     existingSession.CloudflareCallSessionID,
+					"trackName":     trackName,
+				})
+			}
+		}
+
+		if len(pullTracks) > 0 {
+			// 新規参加者セッションに既存トラックを pull
+			if err := p.pullTracksForSession(apiBase, authHeader, cfSessionID, pullTracks, us); err != nil {
+				p.LogError("failed to pull existing tracks for new session", "err", err.Error())
+			}
+		}
+	}
+
+	// STEP 3: 既存参加者全員に新規参加者のトラックを pull させる
+	if len(pushedTrackNames) > 0 {
+		existingSessions2, err := p.store.GetCallCloudflareSessions(callID)
+		if err != nil {
+			p.LogError("failed to get existing cloudflare sessions for notify", "err", err.Error())
+		} else {
+			for _, existingSession := range existingSessions2 {
+				if existingSession.MMSessionID == msg.SessionID {
+					continue // 自分自身はスキップ
+				}
+				existingUS := p.getSessionByOriginalID(existingSession.MMSessionID)
+				if existingUS == nil {
+					continue
+				}
+				newTracks := make([]map[string]interface{}, 0, len(pushedTrackNames))
+				for _, trackName := range pushedTrackNames {
+					newTracks = append(newTracks, map[string]interface{}{
+						"location":  "remote",
+						"sessionId": cfSessionID,
+						"trackName": trackName,
+					})
+				}
+				if err := p.pullTracksForSession(apiBase, authHeader, existingSession.CloudflareCallSessionID, newTracks, existingUS); err != nil {
+					p.LogError("failed to pull new tracks for existing session", "err", err.Error(), "mmSessionID", existingSession.MMSessionID)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// getCloudflareSessionTracks は指定 CF セッションが持つ push 済みトラックの trackName 一覧を返す
+func (p *Plugin) getCloudflareSessionTracks(apiBase, authHeader, cfSessionID string) ([]string, error) {
+	req, err := http.NewRequest("GET", apiBase+"/sessions/"+cfSessionID, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create get session request: %w", err)
+	}
+	req.Header.Add("Authorization", authHeader)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute get session request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("unexpected status %d from get session: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read get session response: %w", err)
+	}
+
+	var sessionInfo map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &sessionInfo); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal session info: %w", err)
+	}
+
+	var trackNames []string
+	if tracksRaw, ok := sessionInfo["tracks"].([]interface{}); ok {
+		for _, t := range tracksRaw {
+			if tMap, ok := t.(map[string]interface{}); ok {
+				// location == "local" のトラックのみ（push 済み）
+				if loc, _ := tMap["location"].(string); loc == "local" {
+					if tn, ok := tMap["trackName"].(string); ok && tn != "" {
+						trackNames = append(trackNames, tn)
+					}
+				}
+			}
+		}
+	}
+	return trackNames, nil
+}
+
+// pullTracksForSession は指定 CF セッションに remote トラックを追加し、renegotiate を行い、
+// answer を us（クライアント）に wsEventSignal で送信する
+func (p *Plugin) pullTracksForSession(apiBase, authHeader, cfSessionID string, pullTracks []map[string]interface{}, us *session) error {
+	pullReqBody := map[string]interface{}{
+		"tracks": pullTracks,
+	}
+	jsonBody, err := json.Marshal(pullReqBody)
+	if err != nil {
+		return fmt.Errorf("failed to marshal pull request: %w", err)
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", apiBase+"/sessions/"+cfSessionID+"/tracks/new", bytes.NewReader(jsonBody))
+	if err != nil {
+		return fmt.Errorf("failed to create pull tracks request: %w", err)
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", authHeader)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to execute pull tracks request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read pull tracks response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status %d from pull tracks: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	// Cloudflare は pull の場合 offer を返す → クライアントが answer を作り renegotiate する
+	// wsEventSignal でクライアントに offer を送信する
+	p.publishWebSocketEvent(wsEventSignal, map[string]interface{}{
+		"data":   string(bodyBytes),
+		"connID": us.originalConnID,
+	}, &WebSocketBroadcast{ConnectionID: us.connID, ReliableClusterSend: true})
+
 	return nil
 }
 
 func (p *Plugin) handleIceMessage(mmSessionID string, data []byte) error {
 	apiBase, err := p.cloudflareAPIBase()
+
 	if err != nil {
 		return fmt.Errorf("cloudflare not configured: %w", err)
 	}
@@ -1715,6 +1912,82 @@ func (p *Plugin) handleIceMessage(mmSessionID string, data []byte) error {
 		p.LogDebug("unexpected status from ICE PUT", "status", resp.StatusCode, "body", string(bodyBytes))
 	}
 
+	return nil
+}
+
+// handleRenegotiateMessage はクライアントから送られた answer (renegotiate) を
+// Cloudflare Calls API の /sessions/{sessionId}/renegotiate エンドポイントに転送する
+func (p *Plugin) handleRenegotiateMessage(mmSessionID string, data []byte) error {
+	apiBase, err := p.cloudflareAPIBase()
+	if err != nil {
+		return fmt.Errorf("cloudflare not configured: %w", err)
+	}
+	authHeader, err := p.cloudflareAuthHeader()
+	if err != nil {
+		return fmt.Errorf("cloudflare not configured: %w", err)
+	}
+
+	cfSession, err := p.store.GetCallCloudflareSession(mmSessionID)
+	if err != nil {
+		return fmt.Errorf("failed to get cloudflare session for renegotiate: %w", err)
+	}
+
+	// data = {"sdp": {"type":"answer","sdp":"v=0..."}} 形式
+	// unpackSDPData で解凍済みの JSON オブジェクトが入っている
+	var dataMap map[string]interface{}
+	if err := json.Unmarshal(data, &dataMap); err != nil {
+		return fmt.Errorf("failed to unmarshal renegotiate data: %w", err)
+	}
+
+	// sdp フィールドは {"type":"answer","sdp":"v=0..."} 形式の map
+	var sdpStr string
+	switch v := dataMap["sdp"].(type) {
+	case map[string]interface{}:
+		// 正常ケース: {"type":"answer","sdp":"v=0..."}
+		sdpStr, _ = v["sdp"].(string)
+	case string:
+		// フォールバック: SDP 文字列がそのまま入っている場合
+		sdpStr = v
+	}
+
+	if sdpStr == "" {
+		return fmt.Errorf("missing sdp in renegotiate message")
+	}
+
+	reqBody := map[string]interface{}{
+		"sessionDescription": map[string]interface{}{
+			"type": "answer",
+			"sdp":  sdpStr,
+		},
+	}
+	jsonBody, err := json.Marshal(reqBody)
+	if err != nil {
+		return fmt.Errorf("failed to marshal renegotiate request: %w", err)
+	}
+
+	req, err := http.NewRequest("PUT",
+		apiBase+"/sessions/"+cfSession.CloudflareCallSessionID+"/renegotiate",
+		bytes.NewReader(jsonBody),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create renegotiate request: %w", err)
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", authHeader)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to execute renegotiate request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status %d from renegotiate: %s", resp.StatusCode, string(respBody))
+	}
+
+	p.LogDebug("renegotiate succeeded", "mmSessionID", mmSessionID, "cfSessionID", cfSession.CloudflareCallSessionID)
 	return nil
 }
 

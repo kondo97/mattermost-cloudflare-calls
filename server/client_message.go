@@ -31,6 +31,7 @@ const (
 	clientMessageTypeMetric      = "metric"
 	clientMessageTypeCallState   = "call_state"
 	clientMessageTypeAddUser     = "add_user"
+	clientMessageTypeRenegotiate = "renegotiate"
 )
 
 func (m *clientMessage) ToJSON() ([]byte, error) {

@@ -51,6 +51,7 @@ type Store interface {
 	KVGet(pluginID, key string, fromWriter bool) ([]byte, error)
 	CreateCallCloudflareSession(session *public.CallCloudflareSession) error
 	GetCallCloudflareSession(mmSessionID string) (*public.CallCloudflareSession, error)
+	GetCallCloudflareSessions(callID string) ([]*public.CallCloudflareSession, error)
 	DeleteCallCloudflareSession(mmSessionID string) error
 }
 

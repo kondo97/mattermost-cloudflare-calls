@@ -1,5 +1,5 @@
 {
-  "id": "com.mattermost.cloudflare.calls",
+  "id": "com.mattermost.calls",
   "name": "Mattermost Cloudflare Calls",
   "description": "Integrates real-time voice communication in Mattermost",
   "homepage_url": "https://github.com/kondo97/mattermost-cloudflare-calls/",
@@ -408,7 +408,7 @@
             "display_name": "Cloudflare Calls App ID",
             "type": "text",
             "help_text": "The App ID for your Cloudflare Calls application. When set together with CloudflareCallsAppToken, calls will be routed through the Cloudflare Calls API.",
-            "default": "",
+            "default": "5a11beb519a5f360006faa9249830037",
             "placeholder": "your-cloudflare-calls-app-id",
             "hosting": "on-prem"
           },
@@ -417,7 +417,7 @@
             "display_name": "Cloudflare Calls App Token",
             "type": "text",
             "help_text": "The secret App Token for your Cloudflare Calls application.",
-            "default": "",
+            "default": "af68e58c1025bed9103f8014b46d0ba8ed2ec74c659e79f8893db67185d7a5c1",
             "placeholder": "your-cloudflare-calls-app-token",
             "hosting": "on-prem"
           }
@@ -743,7 +743,7 @@
         "display_name": "Cloudflare Calls App ID",
         "type": "text",
         "help_text": "The App ID for your Cloudflare Calls application. When set together with CloudflareCallsAppToken, calls will be routed through the Cloudflare Calls API.",
-        "default": "",
+        "default": "5a11beb519a5f360006faa9249830037",
         "placeholder": "your-cloudflare-calls-app-id",
         "hosting": "on-prem"
       },
@@ -752,7 +752,7 @@
         "display_name": "Cloudflare Calls App Token",
         "type": "text",
         "help_text": "The secret App Token for your Cloudflare Calls application.",
-        "default": "",
+        "default": "af68e58c1025bed9103f8014b46d0ba8ed2ec74c659e79f8893db67185d7a5c1",
         "placeholder": "your-cloudflare-calls-app-token",
         "hosting": "on-prem"
       }

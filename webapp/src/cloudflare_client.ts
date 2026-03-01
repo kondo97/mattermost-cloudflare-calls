@@ -226,10 +226,14 @@ export default class CloudflareCallsClient extends EventEmitter {
 
         this.peer = peer;
 
-        const sdpHandler = (sdp: RTCSessionDescription) => {
+        // renegotiation 用 answer ハンドラ:
+        // サーバーから pull の offer を受け取った後、クライアントが作成した answer を
+        // renegotiate メッセージとしてサーバーへ送信する
+        const renegotiateHandler = (sdp: RTCSessionDescription) => {
             const payload = JSON.stringify(sdp);
-            ws.send('sdp', {
-                data: zlibSync(strToU8(payload)),
+            logDebug('sending renegotiate answer to server');
+            ws.send('renegotiate', {
+                sdp: zlibSync(strToU8(payload)),
             }, true);
         };
 
@@ -255,7 +259,7 @@ export default class CloudflareCallsClient extends EventEmitter {
         };
 
         peer.on('offer', offerWithTracksHandler);
-        peer.on('answer', sdpHandler);
+        peer.on('answer', renegotiateHandler);
 
         peer.on('addUser', (transceivers: RTCRtpTransceiver[]) => {
             ws.send('addUser', {
