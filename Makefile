@@ -318,7 +318,7 @@ ifneq ($(HAS_WEBAPP),)
 	mkdir dist/$(PLUGIN_ID)/standalone
 	cp -r standalone/dist dist/$(PLUGIN_ID)/standalone/dist
 endif
-	cd dist && tar -cvzf $(BUNDLE_NAME) $(PLUGIN_ID)
+	cd dist && tar --no-mac-metadata -cvzf $(BUNDLE_NAME) $(PLUGIN_ID)
 
 	@echo plugin built at: dist/$(BUNDLE_NAME)
 

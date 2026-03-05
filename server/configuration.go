@@ -143,7 +143,7 @@ type clientConfig struct {
 	// Cloudflare Calls App ID
 	CloudflareCallsAppID string
 	// Cloudflare Calls App Token (secret)
-	CloudflareCallsAppToken string
+	CloudflareCallsAppToken string `json:"-"`
 }
 
 type adminClientConfig struct {
@@ -549,6 +549,7 @@ func (p *Plugin) getClientConfig(c *configuration) clientConfig {
 		EnableAV1:            c.EnableAV1,
 		GroupCallsAllowed:    p.licenseChecker.GroupCallsAllowed(),
 		EnableDCSignaling:    c.EnableDCSignaling,
+		CloudflareCallsAppID: c.CloudflareCallsAppID,
 	}
 }
 
