@@ -195,36 +195,6 @@ func TestConfigurationIsValid(t *testing.T) {
 			err: "TranscriberNumThreads is not valid: should be greater than 0",
 		},
 		{
-			name: "cloudflare: only app ID set",
-			input: func() configuration {
-				var cfg configuration
-				cfg.SetDefaults()
-				cfg.CloudflareCallsAppID = "some-app-id"
-				return cfg
-			}(),
-			err: "CloudflareCallsAppID and CloudflareCallsAppToken must both be set or both be empty",
-		},
-		{
-			name: "cloudflare: only app token set",
-			input: func() configuration {
-				var cfg configuration
-				cfg.SetDefaults()
-				cfg.CloudflareCallsAppToken = "some-app-token"
-				return cfg
-			}(),
-			err: "CloudflareCallsAppID and CloudflareCallsAppToken must both be set or both be empty",
-		},
-		{
-			name: "cloudflare: both app ID and token set",
-			input: func() configuration {
-				var cfg configuration
-				cfg.SetDefaults()
-				cfg.CloudflareCallsAppID = "some-app-id"
-				cfg.CloudflareCallsAppToken = "some-app-token"
-				return cfg
-			}(),
-		},
-		{
 			name:  "defaults",
 			input: defaultConfig,
 		},

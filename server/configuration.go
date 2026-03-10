@@ -93,6 +93,11 @@ type configuration struct {
 	adminClientConfig
 
 	clientConfig
+
+	// Cloudflare Calls App ID (set via MM_CALLS_CLOUDFLARE_APP_ID env var)
+	CloudflareCallsAppID string
+	// Cloudflare Calls App Token (set via MM_CALLS_CLOUDFLARE_APP_TOKEN env var)
+	CloudflareCallsAppToken string
 }
 
 type clientConfig struct {
@@ -139,11 +144,6 @@ type clientConfig struct {
 	GroupCallsAllowed bool
 	// When set to true it enables experimental support for using the data channel for signaling.
 	EnableDCSignaling *bool
-
-	// Cloudflare Calls App ID
-	CloudflareCallsAppID string
-	// Cloudflare Calls App Token (secret)
-	CloudflareCallsAppToken string `json:"-"`
 }
 
 type adminClientConfig struct {
@@ -277,12 +277,6 @@ func (c *configuration) SetDefaults() {
 	if c.EnableDCSignaling == nil {
 		c.EnableDCSignaling = model.NewPointer(false)
 	}
-	if c.CloudflareCallsAppID == "" {
-		c.CloudflareCallsAppID = "5a11beb519a5f360006faa9249830037"
-	}
-	if c.CloudflareCallsAppToken == "" {
-		c.CloudflareCallsAppToken = "af68e58c1025bed9103f8014b46d0ba8ed2ec74c659e79f8893db67185d7a5c1"
-	}
 }
 
 func (c *configuration) IsValid() error {
@@ -360,11 +354,6 @@ func (c *configuration) IsValid() error {
 		if c.LiveCaptionsLanguage != "" && len(c.LiveCaptionsLanguage) != 2 {
 			return fmt.Errorf("LiveCaptionsLanguage is not valid: should be a 2-letter ISO 639 set 1 language code, or blank for default")
 		}
-	}
-
-	// Cloudflare Calls: either both AppID and AppToken are set, or neither
-	if (c.CloudflareCallsAppID == "") != (c.CloudflareCallsAppToken == "") {
-		return fmt.Errorf("CloudflareCallsAppID and CloudflareCallsAppToken must both be set or both be empty")
 	}
 
 	return nil
@@ -549,7 +538,6 @@ func (p *Plugin) getClientConfig(c *configuration) clientConfig {
 		EnableAV1:            c.EnableAV1,
 		GroupCallsAllowed:    p.licenseChecker.GroupCallsAllowed(),
 		EnableDCSignaling:    c.EnableDCSignaling,
-		CloudflareCallsAppID: c.CloudflareCallsAppID,
 	}
 }
 
@@ -718,6 +706,13 @@ func (p *Plugin) setOverrides(cfg *configuration) {
 	cfg.TCPServerAddress = strings.TrimSpace(cfg.TCPServerAddress)
 	cfg.RTCDServiceURL = strings.TrimSpace(cfg.RTCDServiceURL)
 	cfg.JobServiceURL = strings.TrimSpace(cfg.JobServiceURL)
+
+	if appID := os.Getenv("MM_CALLS_CLOUDFLARE_APP_ID"); appID != "" {
+		cfg.CloudflareCallsAppID = appID
+	}
+	if appToken := os.Getenv("MM_CALLS_CLOUDFLARE_APP_TOKEN"); appToken != "" {
+		cfg.CloudflareCallsAppToken = appToken
+	}
 }
 
 func (p *Plugin) isSingleHandler() bool {
