@@ -20,7 +20,7 @@ func (s *Store) CreateCallCloudflareSession(session *public.CallCloudflareSessio
 
 	qb := getQueryBuilder(s.driverName).
 		Insert("calls_cloudflare_sessions").
-		Columns("id", "callid", "mm_session_id", "sessionid").
+		Columns("id", "callid", "mm_session_id", "cloudflare_session_id").
 		Values(session.ID, session.CallID, session.MMSessionID, session.CloudflareCallSessionID)
 
 	q, args, err := qb.ToSql()
@@ -40,7 +40,7 @@ func (s *Store) CreateCallCloudflareSession(session *public.CallCloudflareSessio
 
 func (s *Store) GetCallCloudflareSession(mmSessionID string) (*public.CallCloudflareSession, error) {
 	qb := getQueryBuilder(s.driverName).
-		Select("id", "callid", "mm_session_id", "sessionid").
+		Select("id", "callid", "mm_session_id", "cloudflare_session_id").
 		From("calls_cloudflare_sessions").
 		Where(sq.Eq{"mm_session_id": mmSessionID})
 
@@ -62,7 +62,7 @@ func (s *Store) GetCallCloudflareSession(mmSessionID string) (*public.CallCloudf
 
 func (s *Store) GetCallCloudflareSessions(callID string) ([]*public.CallCloudflareSession, error) {
 	qb := getQueryBuilder(s.driverName).
-		Select("id", "callid", "mm_session_id", "sessionid").
+		Select("id", "callid", "mm_session_id", "cloudflare_session_id").
 		From("calls_cloudflare_sessions").
 		Where(sq.Eq{"callid": callID})
 
