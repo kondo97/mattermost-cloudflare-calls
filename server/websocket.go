@@ -430,7 +430,6 @@ func (p *Plugin) handleClientMsg(us *session, msg clientMessage, handlerID strin
 			return fmt.Errorf("failed to handle add user: %w", err)
 		}
 	case clientMessageTypeRenegotiate:
-		p.LogDebug("received renegotiate", "connID", us.connID, "originalConnID", us.originalConnID)
 		if err := p.handleRenegotiateMessage(us.originalConnID, msg.Data); err != nil {
 			return fmt.Errorf("failed to handle renegotiate: %w", err)
 		}
@@ -1701,7 +1700,6 @@ func (p *Plugin) handleSdpMessage(msg rtc.Message, callID string) error {
 	if err := p.store.CreateCallCloudflareSession(cloudflareSession); err != nil {
 		return fmt.Errorf("failed to save cloudflare session: %w", err)
 	}
-	p.LogDebug("cloudflare session created", "cfSessionID", cfSessionID, "mmSessionID", msg.SessionID, "callID", callID)
 
 	// Cloudflare API レスポンス (answer) を新規参加者クライアントへ送信
 	us := p.getSessionByOriginalID(msg.SessionID)
@@ -1883,8 +1881,6 @@ func (p *Plugin) handleIceMessage(mmSessionID string, data []byte) error {
 	// ICE candidate を Cloudflare Calls API に転送する
 	cfSession, err := p.store.GetCallCloudflareSession(mmSessionID)
 	if err != nil {
-		// セッションが未作成の場合（SDPより先にICEが来ることはないが一応スキップ）
-		p.LogDebug("cloudflare session not found for ICE candidate, skipping", "mmSessionID", mmSessionID)
 		return nil
 	}
 
@@ -1909,7 +1905,7 @@ func (p *Plugin) handleIceMessage(mmSessionID string, data []byte) error {
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		p.LogDebug("unexpected status from ICE PUT", "status", resp.StatusCode, "body", string(bodyBytes))
+		return fmt.Errorf("unexpected status %d from ICE PUT: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	return nil
@@ -1987,7 +1983,6 @@ func (p *Plugin) handleRenegotiateMessage(mmSessionID string, data []byte) error
 		return fmt.Errorf("unexpected status %d from renegotiate: %s", resp.StatusCode, string(respBody))
 	}
 
-	p.LogDebug("renegotiate succeeded", "mmSessionID", mmSessionID, "cfSessionID", cfSession.CloudflareCallSessionID)
 	return nil
 }
 

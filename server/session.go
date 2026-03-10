@@ -514,7 +514,7 @@ func (p *Plugin) removeSession(us *session) error {
 
 	// Cloudflare セッション情報をDBから削除（存在しない場合は無視）
 	if err := p.store.DeleteCallCloudflareSession(us.originalConnID); err != nil {
-		p.LogDebug("failed to delete cloudflare session (may not exist)", "originalConnID", us.originalConnID, "err", err.Error())
+		p.LogError("failed to delete cloudflare session", "originalConnID", us.originalConnID, "err", err.Error())
 	}
 
 	sessionsCount, err := p.store.GetCallSessionsCount(us.callID, db.GetCallSessionOpts{})
